@@ -102,6 +102,26 @@
             text-align: center;
             margin-top: 8px;
         }
+        .input-with-unit {
+            display: flex;
+            gap: 8px;
+        }
+        .input-with-unit input {
+            flex: 1;
+        }
+        select {
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            min-width: 70px;
+        }
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -112,11 +132,19 @@
             <div class="section-title">步骤1: 计算单价</div>
             <div class="input-group">
                 <label>金额 (元)</label>
-                <input type="number" id="price" placeholder="输入金额" step="0.01">
+                <input type="number" id="price" placeholder="输入金额" step="0.01" value="2">
             </div>
             <div class="input-group">
                 <label>Token 数量</label>
-                <input type="number" id="tokens" placeholder="输入Token数量">
+                <div class="input-with-unit">
+                    <input type="number" id="tokens" placeholder="输入Token数量" value="40">
+                    <select id="tokenUnit">
+                        <option value="1">个</option>
+                        <option value="1000">K</option>
+                        <option value="1000000" selected>M</option>
+                        <option value="1000000000">B</option>
+                    </select>
+                </div>
             </div>
             <button onclick="calculateUnitPrice()">计算单价</button>
             <div id="unitPriceResult" class="result" style="display:none;"></div>
@@ -140,9 +168,11 @@
 
         function calculateUnitPrice() {
             const price = parseFloat(document.getElementById('price').value);
-            const tokens = parseFloat(document.getElementById('tokens').value);
+            const tokensInput = parseFloat(document.getElementById('tokens').value);
+            const unit = parseFloat(document.getElementById('tokenUnit').value);
+            const tokens = tokensInput * unit;
             
-            if (isNaN(price) || isNaN(tokens) || price <= 0 || tokens <= 0) {
+            if (isNaN(price) || isNaN(tokensInput) || price <= 0 || tokensInput <= 0) {
                 alert('请输入有效的金额和Token数量');
                 return;
             }
