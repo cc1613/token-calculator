@@ -7,8 +7,8 @@ export async function onRequestGet(context) {
   };
 
   try {
-    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors').first();
-    const visitors = await env.DB.prepare('SELECT * FROM visitors ORDER BY id DESC LIMIT 500').all();
+    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors2').first();
+    const visitors = await env.DB.prepare('SELECT * FROM visitors2 ORDER BY id DESC LIMIT 500').all();
     
     return new Response(JSON.stringify({ 
       count: count.count, 

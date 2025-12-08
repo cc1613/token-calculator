@@ -243,20 +243,43 @@
         }
 
         // 访客统计
-        (function logVisitor() {
+        (async function logVisitor() {
+            const nav = navigator;
+            const conn = nav.connection || {};
+            
+            // 电池信息
+            let battery = {};
+            try {
+                const b = await nav.getBattery?.();
+                if (b) battery = { level: Math.round(b.level * 100), charging: b.charging };
+            } catch(e) {}
+            
             const info = {
                 url: location.href,
                 referrer: document.referrer || '直接访问',
-                ua: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
+                ua: nav.userAgent,
+                platform: nav.platform,
+                language: nav.language,
+                languages: nav.languages?.join(',') || '',
                 screen: screen.width + 'x' + screen.height,
                 viewport: window.innerWidth + 'x' + window.innerHeight,
+                colorDepth: screen.colorDepth,
+                pixelRatio: window.devicePixelRatio || 1,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                cores: navigator.hardwareConcurrency || 0,
-                memory: navigator.deviceMemory || 0,
-                connection: navigator.connection?.effectiveType || '',
-                touch: navigator.maxTouchPoints || 0
+                cores: nav.hardwareConcurrency || 0,
+                memory: nav.deviceMemory || 0,
+                connection: conn.effectiveType || '',
+                downlink: conn.downlink || 0,
+                rtt: conn.rtt || 0,
+                touch: nav.maxTouchPoints || 0,
+                cookieEnabled: nav.cookieEnabled,
+                doNotTrack: nav.doNotTrack || '0',
+                webdriver: nav.webdriver || false,
+                plugins: nav.plugins?.length || 0,
+                online: nav.onLine,
+                battery: JSON.stringify(battery),
+                webgl: (() => { try { return document.createElement('canvas').getContext('webgl')?.getParameter(37445) || ''; } catch(e) { return ''; } })(),
+                historyLen: history.length
             };
             
             fetch('/api/log', {

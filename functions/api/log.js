@@ -11,29 +11,43 @@ export async function onRequestPost(context) {
     const data = await request.json();
     
     await env.DB.prepare(`
-      INSERT INTO visitors (timestamp, ip, country, city, region, url, referrer, ua, platform, language, screen, viewport, timezone, cores, memory, connection, touch)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO visitors2 (timestamp, ip, country, city, region, asn, url, referrer, ua, platform, language, languages, screen, viewport, colorDepth, pixelRatio, timezone, cores, memory, connection, downlink, rtt, touch, cookieEnabled, doNotTrack, webdriver, plugins, online, battery, webgl, historyLen)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       new Date().toISOString(),
       request.headers.get('CF-Connecting-IP') || '',
       request.headers.get('CF-IPCountry') || '',
       cf.city || '',
       cf.region || '',
+      cf.asn ? 'AS' + cf.asn : '',
       data.url || '',
       data.referrer || '',
       data.ua || '',
       data.platform || '',
       data.language || '',
+      data.languages || '',
       data.screen || '',
       data.viewport || '',
+      data.colorDepth || 0,
+      data.pixelRatio || 1,
       data.timezone || '',
       data.cores || 0,
       data.memory || 0,
       data.connection || '',
-      data.touch || 0
+      data.downlink || 0,
+      data.rtt || 0,
+      data.touch || 0,
+      data.cookieEnabled ? 1 : 0,
+      data.doNotTrack || '',
+      data.webdriver ? 1 : 0,
+      data.plugins || 0,
+      data.online ? 1 : 0,
+      data.battery || '',
+      data.webgl || '',
+      data.historyLen || 0
     ).run();
     
-    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors').first();
+    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors2').first();
     
     return new Response(JSON.stringify({ success: true, count: count.count }), { headers: corsHeaders });
   } catch (e) {
