@@ -4,14 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token价格计算器</title>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-XXXXXXXXXX');
-    </script>
-    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -161,30 +153,6 @@
             transform: none;
             box-shadow: none;
         }
-        .stats {
-            margin-top: 16px;
-            padding: 12px;
-            background: #f0f0f0;
-            border-radius: 8px;
-            font-size: 11px;
-            color: #666;
-        }
-        .stats-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
-        .stats-row:last-child {
-            margin-bottom: 0;
-        }
-        .visitor-info {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #ddd;
-            font-size: 10px;
-            color: #999;
-            word-break: break-all;
-        }
     </style>
 </head>
 <body>
@@ -217,13 +185,6 @@
             <button onclick="calculate()">计算</button>
             <div id="unitPriceResult" class="result" style="display:none;"></div>
             <div id="convertResult" class="result" style="display:none;"></div>
-            
-            <div class="stats">
-                <div class="stats-row"><span>本站总访问量</span><span id="busuanzi_value_site_pv">-</span></div>
-                <div class="stats-row"><span>本站访客数</span><span id="busuanzi_value_site_uv">-</span></div>
-                <div class="stats-row"><span>本页访问量</span><span id="busuanzi_value_page_pv">-</span></div>
-                <div class="visitor-info" id="visitorInfo"></div>
-            </div>
         </div>
     </div>
 
@@ -280,49 +241,6 @@
                 alert('已复制: ' + text);
             });
         }
-
-        // 收集访客信息
-        function collectVisitorInfo() {
-            const info = {
-                time: new Date().toLocaleString('zh-CN'),
-                url: location.href,
-                referrer: document.referrer || '直接访问',
-                ua: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
-                screen: `${screen.width}x${screen.height}`,
-                viewport: `${window.innerWidth}x${window.innerHeight}`,
-                colorDepth: screen.colorDepth + 'bit',
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                online: navigator.onLine ? '在线' : '离线',
-                cookieEnabled: navigator.cookieEnabled ? '是' : '否',
-                cores: navigator.hardwareConcurrency || '未知',
-                memory: navigator.deviceMemory ? navigator.deviceMemory + 'GB' : '未知',
-                connection: navigator.connection ? navigator.connection.effectiveType : '未知',
-                touchPoints: navigator.maxTouchPoints || 0
-            };
-            
-            const infoEl = document.getElementById('visitorInfo');
-            infoEl.innerHTML = `
-                <div>访问时间: ${info.time}</div>
-                <div>来源: ${info.referrer}</div>
-                <div>屏幕: ${info.screen} | 窗口: ${info.viewport}</div>
-                <div>语言: ${info.language} | 时区: ${info.timezone}</div>
-                <div>平台: ${info.platform}</div>
-                <div>CPU核心: ${info.cores} | 内存: ${info.memory} | 网络: ${info.connection}</div>
-                <div>触控点: ${info.touchPoints} | Cookie: ${info.cookieEnabled}</div>
-            `;
-            
-            // 存储到localStorage用于统计
-            const visits = JSON.parse(localStorage.getItem('visits') || '[]');
-            visits.push(info);
-            if (visits.length > 100) visits.shift();
-            localStorage.setItem('visits', JSON.stringify(visits));
-            
-            console.log('Visitor Info:', info);
-        }
-        
-        window.onload = collectVisitorInfo;
     </script>
 </body>
 </html>
