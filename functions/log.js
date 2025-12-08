@@ -1,5 +1,6 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const cf = request.cf || {};
   
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -16,8 +17,8 @@ export async function onRequestPost(context) {
       new Date().toISOString(),
       request.headers.get('CF-Connecting-IP') || '',
       request.headers.get('CF-IPCountry') || '',
-      context.cf?.city || '',
-      context.cf?.region || '',
+      cf.city || '',
+      cf.region || '',
       data.url || '',
       data.referrer || '',
       data.ua || '',
