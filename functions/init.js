@@ -2,7 +2,7 @@ export async function onRequestGet(context) {
   const { env } = context;
   
   try {
-    await env.DB.exec(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS visitors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT,
@@ -23,7 +23,7 @@ export async function onRequestGet(context) {
         connection TEXT,
         touch INTEGER
       )
-    `);
+    `).run();
     return new Response('Database initialized successfully');
   } catch (e) {
     return new Response('Error: ' + e.message, { status: 500 });
