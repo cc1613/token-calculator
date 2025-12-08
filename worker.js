@@ -1,5 +1,8 @@
-// Cloudflare Worker - 访客统计
-// 使用前需要：1. 创建 KV namespace 命名为 VISITORS  2. 绑定到此 Worker
+// Cloudflare Worker - 访客统计 (D1 数据库版)
+// 设置步骤：
+// 1. 创建 D1 数据库: wrangler d1 create visitors
+// 2. 绑定到 Worker: 变量名 DB
+// 3. 初始化表: 访问 /init
 
 export default {
   async fetch(request, env) {
@@ -15,25 +18,64 @@ export default {
 
     const url = new URL(request.url);
 
+    // 初始化数据库表
+    if (url.pathname === '/init') {
+      await env.DB.exec(`
+        CREATE TABLE IF NOT EXISTS visitors (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp TEXT,
+          ip TEXT,
+          country TEXT,
+          city TEXT,
+          region TEXT,
+          url TEXT,
+          referrer TEXT,
+          ua TEXT,
+          platform TEXT,
+          language TEXT,
+          screen TEXT,
+          viewport TEXT,
+          timezone TEXT,
+          cores INTEGER,
+          memory REAL,
+          connection TEXT,
+          touch INTEGER
+        )
+      `);
+      return new Response('Database initialized', { headers: corsHeaders });
+    }
+
     // 记录访客
     if (request.method === 'POST' && url.pathname === '/log') {
       try {
         const data = await request.json();
-        const id = Date.now() + '_' + Math.random().toString(36).slice(2);
         
-        // 添加 IP 和时间戳
-        data.ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-        data.country = request.headers.get('CF-IPCountry') || 'unknown';
-        data.city = request.cf?.city || 'unknown';
-        data.timestamp = new Date().toISOString();
+        await env.DB.prepare(`
+          INSERT INTO visitors (timestamp, ip, country, city, region, url, referrer, ua, platform, language, screen, viewport, timezone, cores, memory, connection, touch)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          new Date().toISOString(),
+          request.headers.get('CF-Connecting-IP') || '',
+          request.headers.get('CF-IPCountry') || '',
+          request.cf?.city || '',
+          request.cf?.region || '',
+          data.url || '',
+          data.referrer || '',
+          data.ua || '',
+          data.platform || '',
+          data.language || '',
+          data.screen || '',
+          data.viewport || '',
+          data.timezone || '',
+          data.cores || 0,
+          data.memory || 0,
+          data.connection || '',
+          data.touch || 0
+        ).run();
         
-        await env.VISITORS.put(id, JSON.stringify(data), { expirationTtl: 86400 * 30 }); // 保存30天
+        const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors').first();
         
-        // 更新计数
-        const count = parseInt(await env.VISITORS.get('_count') || '0') + 1;
-        await env.VISITORS.put('_count', count.toString());
-        
-        return new Response(JSON.stringify({ success: true, count }), {
+        return new Response(JSON.stringify({ success: true, count: count.count }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (e) {
@@ -44,25 +86,19 @@ export default {
       }
     }
 
-    // 获取统计（可选：添加密码保护）
+    // 获取统计
     if (request.method === 'GET' && url.pathname === '/stats') {
-      const list = await env.VISITORS.list();
-      const visitors = [];
+      const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors').first();
+      const visitors = await env.DB.prepare('SELECT * FROM visitors ORDER BY id DESC LIMIT 500').all();
       
-      for (const key of list.keys) {
-        if (!key.name.startsWith('_')) {
-          const data = await env.VISITORS.get(key.name);
-          if (data) visitors.push(JSON.parse(data));
-        }
-      }
-      
-      const count = await env.VISITORS.get('_count') || '0';
-      
-      return new Response(JSON.stringify({ count: parseInt(count), visitors }), {
+      return new Response(JSON.stringify({ 
+        count: count.count, 
+        visitors: visitors.results 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    return new Response('Token Calculator Visitor API', { headers: corsHeaders });
+    return new Response('Visitor Stats API', { headers: corsHeaders });
   }
 };
