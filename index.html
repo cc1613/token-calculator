@@ -204,10 +204,12 @@
             const unitPrice = price / tokens;
             const tokensPerYuan = tokens / price;
             
-            const fmt = (n, d) => parseFloat(n.toFixed(d)).toString();
+            const fmtNum = (n) => n.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 10});
+            const fmtVal = (n) => parseFloat(n.toFixed(4)).toString();
+            
             const unitEl = document.getElementById('unitPriceResult');
             unitEl.style.display = 'block';
-            unitEl.innerHTML = `单价: ${fmt(unitPrice, 8)} 元/Token | 1元 = ${fmt(tokensPerYuan, 2)} Token`;
+            unitEl.innerHTML = `单价: ${fmtNum(unitPrice)} 元/Token | 1元 = ${fmtVal(tokensPerYuan)} Token`;
             
             const convertEl = document.getElementById('convertResult');
             if (!isNaN(convertPrice) && convertPrice > 0) {
@@ -215,24 +217,20 @@
                 const wan = resultTokens / 10000;
                 const yi = resultTokens / 100000000;
                 
-                let html = '';
-                const fmtVal = (n) => parseFloat(n.toFixed(6)).toString();
-                
-                if (resultTokens >= 1) {
-                    const v = fmtVal(resultTokens);
-                    html += `<div class="result-item"><span>${v} Token</span><button class="copy-btn" onclick="copyText('${v}')">复制</button></div>`;
-                }
-                if (wan >= 1) {
-                    const v = fmtVal(wan);
-                    html += `<div class="result-item"><span>${v} 万</span><button class="copy-btn" onclick="copyText('${v}')">复制</button></div>`;
-                }
+                let v, label;
                 if (yi >= 1) {
-                    const v = fmtVal(yi);
-                    html += `<div class="result-item"><span>${v} 亿</span><button class="copy-btn" onclick="copyText('${v}')">复制</button></div>`;
+                    v = fmtVal(yi);
+                    label = '亿';
+                } else if (wan >= 1) {
+                    v = fmtVal(wan);
+                    label = '万';
+                } else {
+                    v = fmtVal(resultTokens);
+                    label = 'Token';
                 }
                 
-                convertEl.style.display = html ? 'block' : 'none';
-                convertEl.innerHTML = html;
+                convertEl.style.display = 'block';
+                convertEl.innerHTML = `<div class="result-item"><span>${v} ${label}</span><button class="copy-btn" onclick="copyText('${v}')">复制</button></div>`;
             } else {
                 convertEl.style.display = 'none';
             }
