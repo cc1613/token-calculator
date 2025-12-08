@@ -246,6 +246,85 @@
         (async function logVisitor() {
             const nav = navigator;
             const conn = nav.connection || {};
+            const ua = nav.userAgent;
+            
+            // 解析设备类型和型号
+            const parseDevice = () => {
+                const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+                const isTablet = /iPad|Android(?!.*Mobile)|Tablet/i.test(ua);
+                const isIOS = /iPhone|iPad|iPod/.test(ua);
+                const isAndroid = /Android/.test(ua);
+                const isMac = /Macintosh/.test(ua);
+                const isWindows = /Windows/.test(ua);
+                const isLinux = /Linux/.test(ua) && !isAndroid;
+                
+                let deviceType = 'Desktop';
+                if (isTablet) deviceType = 'Tablet';
+                else if (isMobile) deviceType = 'Mobile';
+                
+                let os = 'Unknown';
+                let osVer = '';
+                if (isIOS) {
+                    os = 'iOS';
+                    const m = ua.match(/OS (\d+[_\.]\d+)/);
+                    if (m) osVer = m[1].replace('_', '.');
+                } else if (isAndroid) {
+                    os = 'Android';
+                    const m = ua.match(/Android (\d+\.?\d*)/);
+                    if (m) osVer = m[1];
+                } else if (isWindows) {
+                    os = 'Windows';
+                    const m = ua.match(/Windows NT (\d+\.\d+)/);
+                    if (m) {
+                        const ver = {'10.0':'10/11','6.3':'8.1','6.2':'8','6.1':'7','6.0':'Vista','5.1':'XP'};
+                        osVer = ver[m[1]] || m[1];
+                    }
+                } else if (isMac) {
+                    os = 'macOS';
+                    const m = ua.match(/Mac OS X (\d+[_\.]\d+)/);
+                    if (m) osVer = m[1].replace('_', '.');
+                } else if (isLinux) {
+                    os = 'Linux';
+                }
+                
+                let device = '';
+                // iPhone 型号
+                if (/iPhone/.test(ua)) {
+                    device = 'iPhone';
+                    const w = screen.width, h = screen.height, r = window.devicePixelRatio;
+                    const s = Math.min(w,h) + 'x' + Math.max(w,h) + '@' + r;
+                    const models = {
+                        '320x568@2': 'SE 1st', '375x667@2': '6/7/8/SE2/SE3', '414x736@3': '6+/7+/8+',
+                        '375x812@3': 'X/XS/11Pro', '414x896@2': 'XR/11', '414x896@3': 'XS Max/11 Pro Max',
+                        '390x844@3': '12/12Pro/13/13Pro/14', '428x926@3': '12PM/13PM/14+',
+                        '393x852@3': '14Pro/15/15Pro', '430x932@3': '14PM/15+/15PM/16/16Pro',
+                        '440x956@3': '16PM'
+                    };
+                    device = 'iPhone ' + (models[s] || '');
+                }
+                // iPad
+                else if (/iPad/.test(ua)) device = 'iPad';
+                // Android 设备
+                else if (isAndroid) {
+                    const m = ua.match(/;\s*([^;)]+)\s*Build/);
+                    if (m) device = m[1].trim();
+                }
+                // Mac
+                else if (isMac) device = 'Mac';
+                // Windows
+                else if (isWindows) device = 'PC';
+                
+                // 浏览器
+                let browser = 'Unknown', browserVer = '';
+                if (/Edg\//.test(ua)) { browser = 'Edge'; browserVer = ua.match(/Edg\/(\d+)/)?.[1] || ''; }
+                else if (/Chrome\//.test(ua)) { browser = 'Chrome'; browserVer = ua.match(/Chrome\/(\d+)/)?.[1] || ''; }
+                else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) { browser = 'Safari'; browserVer = ua.match(/Version\/(\d+)/)?.[1] || ''; }
+                else if (/Firefox\//.test(ua)) { browser = 'Firefox'; browserVer = ua.match(/Firefox\/(\d+)/)?.[1] || ''; }
+                
+                return { deviceType, os, osVer, device, browser, browserVer };
+            };
+            
+            const dev = parseDevice();
             
             // 电池信息
             let battery = {};
@@ -254,10 +333,33 @@
                 if (b) battery = { level: Math.round(b.level * 100), charging: b.charging };
             } catch(e) {}
             
+            // GPU 信息
+            let gpu = '';
+            try {
+                const gl = document.createElement('canvas').getContext('webgl');
+                const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+                if (ext) gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+            } catch(e) {}
+            
+            // userAgentData (新API)
+            let uaData = {};
+            try {
+                if (nav.userAgentData) {
+                    const d = await nav.userAgentData.getHighEntropyValues(['model', 'platformVersion', 'architecture', 'bitness']);
+                    uaData = { model: d.model, platVer: d.platformVersion, arch: d.architecture, bits: d.bitness };
+                }
+            } catch(e) {}
+            
             const info = {
                 url: location.href,
                 referrer: document.referrer || '直接访问',
-                ua: nav.userAgent,
+                ua: ua,
+                deviceType: dev.deviceType,
+                os: dev.os,
+                osVer: dev.osVer,
+                device: dev.device || uaData.model || '',
+                browser: dev.browser,
+                browserVer: dev.browserVer,
                 platform: nav.platform,
                 language: nav.language,
                 languages: nav.languages?.join(',') || '',
@@ -268,6 +370,7 @@
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 cores: nav.hardwareConcurrency || 0,
                 memory: nav.deviceMemory || 0,
+                gpu: gpu,
                 connection: conn.effectiveType || '',
                 downlink: conn.downlink || 0,
                 rtt: conn.rtt || 0,
@@ -278,8 +381,9 @@
                 plugins: nav.plugins?.length || 0,
                 online: nav.onLine,
                 battery: JSON.stringify(battery),
-                webgl: (() => { try { return document.createElement('canvas').getContext('webgl')?.getParameter(37445) || ''; } catch(e) { return ''; } })(),
-                historyLen: history.length
+                historyLen: history.length,
+                arch: uaData.arch || '',
+                bits: uaData.bits || ''
             };
             
             fetch('/api/log', {

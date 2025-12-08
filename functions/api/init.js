@@ -3,7 +3,7 @@ export async function onRequestGet(context) {
   
   try {
     await env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS visitors2 (
+      CREATE TABLE IF NOT EXISTS visitors3 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT,
         ip TEXT,
@@ -14,6 +14,12 @@ export async function onRequestGet(context) {
         url TEXT,
         referrer TEXT,
         ua TEXT,
+        deviceType TEXT,
+        os TEXT,
+        osVer TEXT,
+        device TEXT,
+        browser TEXT,
+        browserVer TEXT,
         platform TEXT,
         language TEXT,
         languages TEXT,
@@ -24,6 +30,7 @@ export async function onRequestGet(context) {
         timezone TEXT,
         cores INTEGER,
         memory REAL,
+        gpu TEXT,
         connection TEXT,
         downlink REAL,
         rtt INTEGER,
@@ -34,11 +41,12 @@ export async function onRequestGet(context) {
         plugins INTEGER,
         online INTEGER,
         battery TEXT,
-        webgl TEXT,
-        historyLen INTEGER
+        historyLen INTEGER,
+        arch TEXT,
+        bits TEXT
       )
     `).run();
-    return new Response('Database v2 initialized successfully');
+    return new Response('Database v3 initialized successfully');
   } catch (e) {
     return new Response('Error: ' + e.message, { status: 500 });
   }

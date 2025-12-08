@@ -11,8 +11,8 @@ export async function onRequestPost(context) {
     const data = await request.json();
     
     await env.DB.prepare(`
-      INSERT INTO visitors2 (timestamp, ip, country, city, region, asn, url, referrer, ua, platform, language, languages, screen, viewport, colorDepth, pixelRatio, timezone, cores, memory, connection, downlink, rtt, touch, cookieEnabled, doNotTrack, webdriver, plugins, online, battery, webgl, historyLen)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO visitors3 (timestamp, ip, country, city, region, asn, url, referrer, ua, deviceType, os, osVer, device, browser, browserVer, platform, language, languages, screen, viewport, colorDepth, pixelRatio, timezone, cores, memory, gpu, connection, downlink, rtt, touch, cookieEnabled, doNotTrack, webdriver, plugins, online, battery, historyLen, arch, bits)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       new Date().toISOString(),
       request.headers.get('CF-Connecting-IP') || '',
@@ -23,6 +23,12 @@ export async function onRequestPost(context) {
       data.url || '',
       data.referrer || '',
       data.ua || '',
+      data.deviceType || '',
+      data.os || '',
+      data.osVer || '',
+      data.device || '',
+      data.browser || '',
+      data.browserVer || '',
       data.platform || '',
       data.language || '',
       data.languages || '',
@@ -33,6 +39,7 @@ export async function onRequestPost(context) {
       data.timezone || '',
       data.cores || 0,
       data.memory || 0,
+      data.gpu || '',
       data.connection || '',
       data.downlink || 0,
       data.rtt || 0,
@@ -43,11 +50,12 @@ export async function onRequestPost(context) {
       data.plugins || 0,
       data.online ? 1 : 0,
       data.battery || '',
-      data.webgl || '',
-      data.historyLen || 0
+      data.historyLen || 0,
+      data.arch || '',
+      data.bits || ''
     ).run();
     
-    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors2').first();
+    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM visitors3').first();
     
     return new Response(JSON.stringify({ success: true, count: count.count }), { headers: corsHeaders });
   } catch (e) {

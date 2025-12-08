@@ -93,28 +93,19 @@
                         <th>国家</th>
                         <th>城市</th>
                         <th>ASN</th>
+                        <th>类型</th>
+                        <th>系统</th>
+                        <th>版本</th>
+                        <th>设备</th>
+                        <th>浏览器</th>
+                        <th>GPU</th>
                         <th>屏幕</th>
-                        <th>窗口</th>
-                        <th>色深</th>
-                        <th>像素比</th>
-                        <th>语言</th>
-                        <th>时区</th>
-                        <th>平台</th>
                         <th>CPU</th>
                         <th>内存</th>
                         <th>网络</th>
-                        <th>带宽</th>
-                        <th>延迟</th>
                         <th>触控</th>
-                        <th>Cookie</th>
-                        <th>DNT</th>
-                        <th>自动化</th>
-                        <th>插件</th>
-                        <th>在线</th>
                         <th>电池</th>
-                        <th>历史</th>
-                        <th>来源</th>
-                        <th>UA</th>
+                        <th>架构</th>
                     </tr>
                 </thead>
                 <tbody id="visitorList">
@@ -126,7 +117,7 @@
 
     <script>
         async function loadStats() {
-            document.getElementById('visitorList').innerHTML = '<tr><td colspan="27" class="empty">加载中...</td></tr>';
+            document.getElementById('visitorList').innerHTML = '<tr><td colspan="19" class="empty">加载中...</td></tr>';
             
             try {
                 const res = await fetch('/api/stats');
@@ -143,7 +134,7 @@
                 document.getElementById('uniqueIps').textContent = uniqueIps;
                 
                 if (visitors.length === 0) {
-                    document.getElementById('visitorList').innerHTML = '<tr><td colspan="27" class="empty">暂无数据</td></tr>';
+                    document.getElementById('visitorList').innerHTML = '<tr><td colspan="19" class="empty">暂无数据</td></tr>';
                     return;
                 }
                 
@@ -152,38 +143,30 @@
                 document.getElementById('visitorList').innerHTML = visitors.map(v => {
                     const bat = v.battery ? JSON.parse(v.battery) : {};
                     const batStr = bat.level !== undefined ? bat.level + '%' + (bat.charging ? '⚡' : '') : '-';
+                    const arch = v.arch && v.bits ? v.arch + '/' + v.bits + 'bit' : '-';
                     return `<tr>
                         <td>${new Date(v.timestamp).toLocaleString('zh-CN')}</td>
                         <td>${v.ip || '-'}</td>
                         <td>${v.country || '-'}</td>
                         <td>${v.city || '-'}</td>
                         <td>${v.asn || '-'}</td>
+                        <td>${v.deviceType || '-'}</td>
+                        <td>${v.os || '-'}</td>
+                        <td>${v.osVer || '-'}</td>
+                        <td title="${v.device || ''}">${v.device || '-'}</td>
+                        <td>${v.browser || '-'}${v.browserVer ? ' ' + v.browserVer : ''}</td>
+                        <td title="${v.gpu || ''}">${(v.gpu || '-').substring(0, 20)}</td>
                         <td>${v.screen || '-'}</td>
-                        <td>${v.viewport || '-'}</td>
-                        <td>${v.colorDepth || '-'}</td>
-                        <td>${v.pixelRatio || '-'}</td>
-                        <td>${v.language || '-'}</td>
-                        <td>${v.timezone || '-'}</td>
-                        <td>${v.platform || '-'}</td>
                         <td>${v.cores || '-'}</td>
                         <td>${v.memory ? v.memory + 'G' : '-'}</td>
                         <td>${v.connection || '-'}</td>
-                        <td>${v.downlink || '-'}</td>
-                        <td>${v.rtt || '-'}</td>
                         <td>${v.touch || 0}</td>
-                        <td>${v.cookieEnabled ? '✓' : '✗'}</td>
-                        <td>${v.doNotTrack || '-'}</td>
-                        <td>${v.webdriver ? '✓' : '✗'}</td>
-                        <td>${v.plugins || 0}</td>
-                        <td>${v.online ? '✓' : '✗'}</td>
                         <td>${batStr}</td>
-                        <td>${v.historyLen || 0}</td>
-                        <td>${v.referrer || '-'}</td>
-                        <td title="${v.ua || ''}">${(v.ua || '-').substring(0, 50)}...</td>
+                        <td>${arch}</td>
                     </tr>`;
                 }).join('');
             } catch (e) {
-                document.getElementById('visitorList').innerHTML = `<tr><td colspan="27" class="empty">加载失败: ${e.message}</td></tr>`;
+                document.getElementById('visitorList').innerHTML = `<tr><td colspan="19" class="empty">加载失败: ${e.message}</td></tr>`;
             }
         }
         
