@@ -263,7 +263,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(info)
-            }).catch(() => {});
+            }).then(r => r.json()).then(d => console.log('Log:', d)).catch(e => console.error('Log error:', e));
         })();
     </script>
 </body>
