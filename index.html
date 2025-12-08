@@ -241,6 +241,32 @@
                 alert('已复制: ' + text);
             });
         }
+
+        // 访客统计 - 替换为你的 Worker URL
+        const WORKER_URL = 'https://your-worker.your-subdomain.workers.dev';
+        
+        (function logVisitor() {
+            const info = {
+                url: location.href,
+                referrer: document.referrer || '直接访问',
+                ua: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screen: screen.width + 'x' + screen.height,
+                viewport: window.innerWidth + 'x' + window.innerHeight,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                cores: navigator.hardwareConcurrency || 0,
+                memory: navigator.deviceMemory || 0,
+                connection: navigator.connection?.effectiveType || '',
+                touch: navigator.maxTouchPoints || 0
+            };
+            
+            fetch(WORKER_URL + '/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(info)
+            }).catch(() => {});
+        })();
     </script>
 </body>
 </html>
