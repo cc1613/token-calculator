@@ -47,6 +47,11 @@
         }
         .input-group {
             margin-bottom: 12px;
+            flex: 1;
+        }
+        .row {
+            display: flex;
+            gap: 12px;
         }
         label {
             display: block;
@@ -155,97 +160,78 @@
         <h1>Token 价格计算器</h1>
         
         <div class="section">
-            <div class="section-title">步骤1: 计算单价</div>
-            <div class="input-group">
-                <label>金额 (元)</label>
-                <input type="number" id="price" placeholder="输入金额" step="0.01" value="2">
-            </div>
-            <div class="input-group">
-                <label>Token 数量</label>
-                <div class="input-with-unit">
-                    <input type="number" id="tokens" placeholder="输入Token数量" value="40">
-                    <select id="tokenUnit">
-                        <option value="1">个</option>
-                        <option value="1000">K</option>
-                        <option value="1000000" selected>M</option>
-                        <option value="1000000000">B</option>
-                    </select>
+            <div class="row">
+                <div class="input-group">
+                    <label>金额 (元)</label>
+                    <input type="number" id="price" placeholder="金额" step="0.01" value="2">
+                </div>
+                <div class="input-group">
+                    <label>Token 数量</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="tokens" placeholder="数量" value="40">
+                        <select id="tokenUnit">
+                            <option value="1">个</option>
+                            <option value="1000">K</option>
+                            <option value="1000000" selected>M</option>
+                            <option value="1000000000">B</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <button onclick="calculateUnitPrice()">计算单价</button>
-            <div id="unitPriceResult" class="result" style="display:none;"></div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">步骤2: 金额转Token</div>
             <div class="input-group">
-                <label>要转换的金额 (元)</label>
-                <input type="number" id="convertPrice" placeholder="输入金额" step="0.01">
+                <label>转换金额 (选填)</label>
+                <input type="number" id="convertPrice" placeholder="输入要转换的金额" step="0.01">
             </div>
-            <button onclick="convertToTokens()">计算可换Token</button>
+            <button onclick="calculate()">计算</button>
+            <div id="unitPriceResult" class="result" style="display:none;"></div>
             <div id="convertResult" class="result" style="display:none;"></div>
         </div>
-        
-        <div class="unit-price" id="savedUnitPrice"></div>
     </div>
 
     <script>
-        let unitPrice = 0;
-
-        function calculateUnitPrice() {
+        function calculate() {
             const price = parseFloat(document.getElementById('price').value);
             const tokensInput = parseFloat(document.getElementById('tokens').value);
             const unit = parseFloat(document.getElementById('tokenUnit').value);
-            const tokens = tokensInput * unit;
+            const convertPrice = parseFloat(document.getElementById('convertPrice').value);
             
             if (isNaN(price) || isNaN(tokensInput) || price <= 0 || tokensInput <= 0) {
                 alert('请输入有效的金额和Token数量');
                 return;
             }
             
-            unitPrice = price / tokens;
+            const tokens = tokensInput * unit;
+            const unitPrice = price / tokens;
             const tokensPerYuan = tokens / price;
             
-            const resultEl = document.getElementById('unitPriceResult');
-            resultEl.style.display = 'block';
-            resultEl.innerHTML = `单价: ${unitPrice.toFixed(6)} 元/Token<br>1元 = ${tokensPerYuan.toFixed(2)} Token`;
+            const unitEl = document.getElementById('unitPriceResult');
+            unitEl.style.display = 'block';
+            unitEl.innerHTML = `单价: ${unitPrice.toFixed(6)} 元/Token | 1元 = ${tokensPerYuan.toFixed(2)} Token`;
             
-            document.getElementById('savedUnitPrice').textContent = `当前单价: ${unitPrice.toFixed(6)} 元/Token`;
-        }
-
-        function convertToTokens() {
-            if (unitPrice <= 0) {
-                alert('请先计算单价');
-                return;
+            const convertEl = document.getElementById('convertResult');
+            if (!isNaN(convertPrice) && convertPrice > 0) {
+                const resultTokens = convertPrice / unitPrice;
+                const wan = resultTokens / 10000;
+                const yi = resultTokens / 100000000;
+                
+                convertEl.style.display = 'block';
+                convertEl.innerHTML = `
+                    <div class="result-item">
+                        <span>${resultTokens.toFixed(2)} Token</span>
+                        <button class="copy-btn" onclick="copyText('${resultTokens.toFixed(2)}')">复制</button>
+                    </div>
+                    <div class="result-item">
+                        <span>${wan.toFixed(4)} 万</span>
+                        <button class="copy-btn" onclick="copyText('${wan.toFixed(4)}')">复制</button>
+                    </div>
+                    <div class="result-item">
+                        <span>${yi.toFixed(6)} 亿</span>
+                        <button class="copy-btn" onclick="copyText('${yi.toFixed(6)}')">复制</button>
+                    </div>
+                `;
+            } else {
+                convertEl.style.display = 'none';
             }
-            
-            const convertPrice = parseFloat(document.getElementById('convertPrice').value);
-            
-            if (isNaN(convertPrice) || convertPrice <= 0) {
-                alert('请输入有效的金额');
-                return;
-            }
-            
-            const resultTokens = convertPrice / unitPrice;
-            const wan = resultTokens / 10000;
-            const yi = resultTokens / 100000000;
-            
-            const resultEl = document.getElementById('convertResult');
-            resultEl.style.display = 'block';
-            resultEl.innerHTML = `
-                <div class="result-item">
-                    <span>${resultTokens.toFixed(2)} Token</span>
-                    <button class="copy-btn" onclick="copyText('${resultTokens.toFixed(2)}')">复制</button>
-                </div>
-                <div class="result-item">
-                    <span>${wan.toFixed(4)} 万</span>
-                    <button class="copy-btn" onclick="copyText('${wan.toFixed(4)}')">复制</button>
-                </div>
-                <div class="result-item">
-                    <span>${yi.toFixed(6)} 亿</span>
-                    <button class="copy-btn" onclick="copyText('${yi.toFixed(6)}')">复制</button>
-                </div>
-            `;
         }
 
         function copyText(text) {
