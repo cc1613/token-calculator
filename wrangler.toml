@@ -1,0 +1,7 @@
+name = "token-calculator"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tools-db"
+database_id = "1cf1f42d-8dc7-415a-817b-0111a4c274de"
