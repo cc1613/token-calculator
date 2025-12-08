@@ -73,8 +73,7 @@
         <h1>访客统计</h1>
         
         <div class="config">
-            <input type="text" id="workerUrl" placeholder="输入你的 Worker URL，如：https://xxx.workers.dev">
-            <button onclick="loadStats()">加载数据</button>
+            <button onclick="loadStats()" style="flex:1">加载数据</button>
         </div>
         
         <div class="stats-header">
@@ -111,24 +110,11 @@
     </div>
 
     <script>
-        // 从 localStorage 读取保存的 URL
-        const savedUrl = localStorage.getItem('workerUrl');
-        if (savedUrl) {
-            document.getElementById('workerUrl').value = savedUrl;
-        }
-
         async function loadStats() {
-            const url = document.getElementById('workerUrl').value.trim();
-            if (!url) {
-                alert('请输入 Worker URL');
-                return;
-            }
-            
-            localStorage.setItem('workerUrl', url);
             document.getElementById('visitorList').innerHTML = '<tr><td colspan="7" class="loading">加载中...</td></tr>';
             
             try {
-                const res = await fetch(url + '/stats');
+                const res = await fetch('/stats');
                 const data = await res.json();
                 
                 document.getElementById('totalCount').textContent = data.count || 0;
@@ -165,8 +151,8 @@
             }
         }
         
-        // 如果有保存的 URL，自动加载
-        if (savedUrl) loadStats();
+        // 页面加载时自动加载数据
+        loadStats();
     </script>
 </body>
 </html>

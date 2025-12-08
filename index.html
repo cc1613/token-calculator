@@ -242,9 +242,7 @@
             });
         }
 
-        // 访客统计 - 替换为你的 Worker URL
-        const WORKER_URL = 'https://token-calculator.pages.dev';
-        
+        // 访客统计
         (function logVisitor() {
             const info = {
                 url: location.href,
@@ -261,7 +259,7 @@
                 touch: navigator.maxTouchPoints || 0
             };
             
-            fetch(WORKER_URL + '/log', {
+            fetch('/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(info)
