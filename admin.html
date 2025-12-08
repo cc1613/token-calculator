@@ -11,7 +11,7 @@
             background: #f5f5f5;
             padding: 20px;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 1400px; margin: 0 auto; }
         h1 { margin-bottom: 20px; color: #333; }
         .stats-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -21,6 +21,7 @@
             margin-bottom: 20px;
             display: flex;
             gap: 40px;
+            flex-wrap: wrap;
         }
         .stat-item { text-align: center; }
         .stat-num { font-size: 32px; font-weight: bold; }
@@ -30,15 +31,6 @@
             padding: 16px;
             border-radius: 8px;
             margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        .config input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
         }
         .config button {
             padding: 10px 20px;
@@ -47,25 +39,45 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-        }
-        table {
             width: 100%;
+        }
+        .card {
             background: white;
             border-radius: 8px;
+            margin-bottom: 12px;
             overflow: hidden;
-            border-collapse: collapse;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        th, td {
-            padding: 12px;
-            text-align: left;
+        .card-header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
             border-bottom: 1px solid #eee;
+        }
+        .card-header:hover { background: #f8f9fa; }
+        .card-main { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .card-time { color: #666; font-size: 13px; min-width: 150px; }
+        .card-ip { font-weight: 600; min-width: 120px; }
+        .card-loc { color: #667eea; min-width: 150px; }
+        .card-device { color: #888; font-size: 12px; }
+        .card-details {
+            display: none;
+            padding: 16px;
+            background: #f8f9fa;
             font-size: 13px;
         }
-        th { background: #f8f9fa; font-weight: 600; }
-        tr:hover { background: #f8f9fa; }
-        .ua { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .empty { text-align: center; padding: 40px; color: #999; }
-        .loading { text-align: center; padding: 40px; }
+        .card.open .card-details { display: block; }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .detail-item { padding: 8px; background: white; border-radius: 4px; }
+        .detail-label { font-size: 11px; color: #999; margin-bottom: 2px; }
+        .detail-value { font-weight: 500; word-break: break-all; }
+        .empty { text-align: center; padding: 40px; color: #999; background: white; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -73,7 +85,7 @@
         <h1>访客统计</h1>
         
         <div class="config">
-            <button onclick="loadStats()" style="flex:1">加载数据</button>
+            <button onclick="loadStats()">刷新数据</button>
         </div>
         
         <div class="stats-header">
@@ -91,27 +103,12 @@
             </div>
         </div>
         
-        <table>
-            <thead>
-                <tr>
-                    <th>时间</th>
-                    <th>IP</th>
-                    <th>地区</th>
-                    <th>屏幕</th>
-                    <th>语言</th>
-                    <th>来源</th>
-                    <th class="ua">UA</th>
-                </tr>
-            </thead>
-            <tbody id="visitorList">
-                <tr><td colspan="7" class="empty">请输入 Worker URL 并点击加载</td></tr>
-            </tbody>
-        </table>
+        <div id="visitorList"><div class="empty">加载中...</div></div>
     </div>
 
     <script>
         async function loadStats() {
-            document.getElementById('visitorList').innerHTML = '<tr><td colspan="7" class="loading">加载中...</td></tr>';
+            document.getElementById('visitorList').innerHTML = '<div class="empty">加载中...</div>';
             
             try {
                 const res = await fetch('/api/stats');
@@ -128,30 +125,55 @@
                 document.getElementById('uniqueIps').textContent = uniqueIps;
                 
                 if (visitors.length === 0) {
-                    document.getElementById('visitorList').innerHTML = '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+                    document.getElementById('visitorList').innerHTML = '<div class="empty">暂无数据</div>';
                     return;
                 }
                 
-                // 按时间倒序
                 visitors.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
-                document.getElementById('visitorList').innerHTML = visitors.map(v => `
-                    <tr>
-                        <td>${new Date(v.timestamp).toLocaleString('zh-CN')}</td>
-                        <td>${v.ip || '-'}</td>
-                        <td>${v.country || '-'} ${v.city || ''}</td>
-                        <td>${v.screen || '-'}</td>
-                        <td>${v.language || '-'}</td>
-                        <td>${v.referrer || '-'}</td>
-                        <td class="ua" title="${v.ua || ''}">${v.ua || '-'}</td>
-                    </tr>
-                `).join('');
+                document.getElementById('visitorList').innerHTML = visitors.map(v => {
+                    const bat = v.battery ? JSON.parse(v.battery) : {};
+                    return `
+                    <div class="card" onclick="this.classList.toggle('open')">
+                        <div class="card-header">
+                            <div class="card-main">
+                                <span class="card-time">${new Date(v.timestamp).toLocaleString('zh-CN')}</span>
+                                <span class="card-ip">${v.ip || '-'}</span>
+                                <span class="card-loc">${v.country || ''} ${v.city || ''} ${v.region || ''}</span>
+                                <span class="card-device">${v.screen || ''} | ${v.platform || ''}</span>
+                            </div>
+                            <span>▼</span>
+                        </div>
+                        <div class="card-details">
+                            <div class="detail-grid">
+                                <div class="detail-item"><div class="detail-label">ASN</div><div class="detail-value">${v.asn || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">屏幕</div><div class="detail-value">${v.screen || '-'} (${v.colorDepth || 0}bit, ${v.pixelRatio || 1}x)</div></div>
+                                <div class="detail-item"><div class="detail-label">窗口</div><div class="detail-value">${v.viewport || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">语言</div><div class="detail-value">${v.languages || v.language || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">时区</div><div class="detail-value">${v.timezone || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">CPU核心</div><div class="detail-value">${v.cores || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">内存</div><div class="detail-value">${v.memory ? v.memory + 'GB' : '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">网络</div><div class="detail-value">${v.connection || '-'} (${v.downlink || 0}Mbps, ${v.rtt || 0}ms)</div></div>
+                                <div class="detail-item"><div class="detail-label">触控点</div><div class="detail-value">${v.touch || 0}</div></div>
+                                <div class="detail-item"><div class="detail-label">Cookie</div><div class="detail-value">${v.cookieEnabled ? '是' : '否'}</div></div>
+                                <div class="detail-item"><div class="detail-label">DNT</div><div class="detail-value">${v.doNotTrack || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">自动化</div><div class="detail-value">${v.webdriver ? '是' : '否'}</div></div>
+                                <div class="detail-item"><div class="detail-label">插件数</div><div class="detail-value">${v.plugins || 0}</div></div>
+                                <div class="detail-item"><div class="detail-label">在线</div><div class="detail-value">${v.online ? '是' : '否'}</div></div>
+                                <div class="detail-item"><div class="detail-label">电池</div><div class="detail-value">${bat.level !== undefined ? bat.level + '%' + (bat.charging ? ' 充电中' : '') : '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">历史长度</div><div class="detail-value">${v.historyLen || 0}</div></div>
+                                <div class="detail-item"><div class="detail-label">WebGL</div><div class="detail-value">${v.webgl || '-'}</div></div>
+                                <div class="detail-item"><div class="detail-label">来源</div><div class="detail-value">${v.referrer || '-'}</div></div>
+                            </div>
+                            <div class="detail-item" style="margin-top:12px"><div class="detail-label">UA</div><div class="detail-value">${v.ua || '-'}</div></div>
+                        </div>
+                    </div>
+                `}).join('');
             } catch (e) {
-                document.getElementById('visitorList').innerHTML = `<tr><td colspan="7" class="empty">加载失败: ${e.message}</td></tr>`;
+                document.getElementById('visitorList').innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
             }
         }
         
-        // 页面加载时自动加载数据
         loadStats();
     </script>
 </body>
