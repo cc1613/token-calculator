@@ -122,6 +122,32 @@
             outline: none;
             border-color: #667eea;
         }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+            margin: 0;
+        }
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -201,10 +227,31 @@
             }
             
             const resultTokens = convertPrice / unitPrice;
+            const wan = resultTokens / 10000;
+            const yi = resultTokens / 100000000;
             
             const resultEl = document.getElementById('convertResult');
             resultEl.style.display = 'block';
-            resultEl.innerHTML = `${convertPrice} 元 = ${resultTokens.toFixed(2)} Token`;
+            resultEl.innerHTML = `
+                <div class="result-item">
+                    <span>${resultTokens.toFixed(2)} Token</span>
+                    <button class="copy-btn" onclick="copyText('${resultTokens.toFixed(2)}')">复制</button>
+                </div>
+                <div class="result-item">
+                    <span>${wan.toFixed(4)} 万</span>
+                    <button class="copy-btn" onclick="copyText('${wan.toFixed(4)}')">复制</button>
+                </div>
+                <div class="result-item">
+                    <span>${yi.toFixed(6)} 亿</span>
+                    <button class="copy-btn" onclick="copyText('${yi.toFixed(6)}')">复制</button>
+                </div>
+            `;
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制: ' + text);
+            });
         }
     </script>
 </body>
