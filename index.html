@@ -259,7 +259,7 @@
                 touch: navigator.maxTouchPoints || 0
             };
             
-            fetch('/log', {
+            fetch('/api/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(info)

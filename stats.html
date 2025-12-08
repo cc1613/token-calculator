@@ -114,7 +114,7 @@
             document.getElementById('visitorList').innerHTML = '<tr><td colspan="7" class="loading">加载中...</td></tr>';
             
             try {
-                const res = await fetch('/stats');
+                const res = await fetch('/api/stats');
                 const data = await res.json();
                 
                 document.getElementById('totalCount').textContent = data.count || 0;
