@@ -5,7 +5,7 @@ export async function onRequest(context) {
     const corsHeaders = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     };
     
@@ -31,7 +31,7 @@ export async function onRequest(context) {
         // GET - 获取用户的所有 Key
         if (request.method === 'GET') {
             const keys = await env.DB.prepare(
-                'SELECT id, api_key, usage_data, error, created_at, updated_at FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
+                'SELECT id, api_key, usage_data, error, note, created_at, updated_at FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
             ).bind(user.id).all();
             
             return new Response(JSON.stringify({ keys: keys.results }), { headers: corsHeaders });
@@ -76,6 +76,19 @@ export async function onRequest(context) {
                 usageData: usageData ? JSON.parse(usageData) : null,
                 error
             }), { headers: corsHeaders });
+        }
+        
+        // PATCH - 更新备注
+        if (request.method === 'PATCH') {
+            const { keyId, note } = await request.json();
+            if (!keyId) {
+                return new Response(JSON.stringify({ error: '缺少 Key ID' }), { status: 400, headers: corsHeaders });
+            }
+            
+            await env.DB.prepare('UPDATE api_keys SET note = ?, updated_at = datetime("now") WHERE id = ? AND user_id = ?')
+                .bind(note || null, keyId, user.id).run();
+            
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }
         
         // DELETE - 删除 Key

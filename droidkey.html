@@ -44,6 +44,17 @@
         .os-detect span { color: #667eea; }
         .current-key { font-family: monospace; font-size: 16px; color: #fff; }
         
+        /* 折叠面板 */
+        .collapsible { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .collapsible:after { content: '▼'; font-size: 10px; color: #666; transition: transform 0.3s; }
+        .collapsible.collapsed:after { transform: rotate(-90deg); }
+        .collapse-content { overflow: hidden; transition: max-height 0.3s ease; }
+        .collapse-content.collapsed { max-height: 0 !important; }
+        
+        /* 备注样式 */
+        .key-note { font-size: 12px; color: #60a5fa; margin-top: 6px; padding: 4px 8px; background: #1e3a5f; border-radius: 4px; display: inline-block; }
+        .btn-note { background: #2d3748; color: #a0aec0; }
+        
         .tabs { display: flex; gap: 0; margin: 16px 0 12px; }
         .tab { padding: 8px 16px; background: #2a2a2a; border: none; color: #888; cursor: pointer; font-size: 13px; }
         .tab:first-child { border-radius: 6px 0 0 6px; }
@@ -134,7 +145,10 @@
             <div class="os-detect">检测到: <span id="osName">-</span></div>
             <div class="current-key">当前: <code id="currentKey">-</code></div>
             
-            <h3 style="font-size:14px; margin:16px 0 8px;">环境变量设置指令</h3>
+            <h3 class="collapsible" style="font-size:14px; margin:16px 0 8px;" onclick="toggleEnvSection()">
+                <span>环境变量设置指令</span>
+            </h3>
+            <div class="collapse-content" id="envSection" style="max-height: 500px;">
             <div class="tabs">
                 <button class="tab active" onclick="showOS('windows')">Windows</button>
                 <button class="tab" onclick="showOS('linux')">Linux</button>
@@ -170,6 +184,7 @@
                     <div class="cmd-label">Zsh 永久设置 (~/.zshrc)</div>
                     <div class="cmd-box"><code id="cmdMacZsh">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.zshrc && source ~/.zshrc</code><button class="copy-btn" onclick="copyCmd('cmdMacZsh')">复制</button></div>
                 </div>
+            </div>
             </div>
         </div>
         
@@ -334,7 +349,8 @@
                     id: k.id,
                     key: k.api_key,
                     usage: k.usage_data ? JSON.parse(k.usage_data) : null,
-                    error: k.error
+                    error: k.error,
+                    note: k.note || ''
                 }));
                 renderKeys();
             } catch (e) {
@@ -403,15 +419,19 @@
                     infoHtml = '<span>正在获取信息...</span>';
                 }
                 
+                const noteHtml = k.note ? `<div class="key-note">${k.note}</div>` : '';
+                
                 return `<div class="key-card ${status} ${i === selectedIndex ? 'selected' : ''}" onclick="selectKey(${i})">
                     <div class="key-header">
                         <span class="key-value">${k.key.substring(0, 40)}${k.key.length > 40 ? '...' : ''}</span>
                         <span class="key-status ${status}">${statusText}</span>
                     </div>
+                    ${noteHtml}
                     <div class="key-info">${infoHtml}</div>
                     <div class="key-actions">
                         <button class="btn-delete" onclick="event.stopPropagation(); deleteKey(${i})">删除</button>
                         <button class="btn-refresh" onclick="event.stopPropagation(); refreshKey(${i})">刷新</button>
+                        <button class="btn-note" onclick="event.stopPropagation(); editNote(${i})">备注</button>
                     </div>
                 </div>`;
             }).join('');
@@ -521,6 +541,40 @@
             selectedIndex = -1;
             renderKeys();
             updateCmds(null);
+        }
+        
+        // 编辑备注
+        async function editNote(index) {
+            const k = keys[index];
+            const note = prompt('输入备注 (留空则清除):', k.note || '');
+            if (note === null) return; // 取消
+            
+            try {
+                const response = await fetch('/api/keys', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ keyId: k.id, note: note })
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                keys[index].note = note;
+                renderKeys();
+            } catch (e) {
+                alert('保存备注失败');
+            }
+        }
+        
+        // 折叠环境变量指令
+        function toggleEnvSection() {
+            const section = document.getElementById('envSection');
+            const header = document.querySelector('.collapsible');
+            section.classList.toggle('collapsed');
+            header.classList.toggle('collapsed');
         }
         
         // 自动刷新

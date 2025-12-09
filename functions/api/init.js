@@ -69,11 +69,19 @@ export async function onRequestGet(context) {
         api_key TEXT NOT NULL,
         usage_data TEXT,
         error TEXT,
+        note TEXT,
         created_at TEXT,
         updated_at TEXT,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `).run();
+    
+    // 添加 note 字段（如果表已存在）
+    try {
+      await env.DB.prepare('ALTER TABLE api_keys ADD COLUMN note TEXT').run();
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
     
     return new Response('Database initialized successfully (visitors3, users, api_keys)');
   } catch (e) {
