@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token价格计算器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 24px;
+            font-size: 24px;
+        }
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .input-group {
+            margin-bottom: 12px;
+            flex: 1;
+        }
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 8px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .result {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .unit-price {
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .input-with-unit {
+            display: flex;
+            gap: 8px;
+        }
+        .input-with-unit input {
+            flex: 1;
+        }
+        select {
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            min-width: 70px;
+        }
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+            margin: 0;
+        }
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Token 价格计算器</h1>
+        
+        <div class="section">
+            <div class="row">
+                <div class="input-group">
+                    <label>金额 (元)</label>
+                    <input type="number" id="price" placeholder="金额" step="0.01" value="2">
+                </div>
+                <div class="input-group">
+                    <label>Token 数量</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="tokens" placeholder="数量" value="40">
+                        <select id="tokenUnit">
+                            <option value="1">个</option>
+                            <option value="1000">K</option>
+                            <option value="1000000" selected>M</option>
+                            <option value="1000000000">B</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>转换金额 (选填)</label>
+                <input type="number" id="convertPrice" placeholder="输入要转换的金额" step="0.01">
+            </div>
+            <button onclick="calculate()">计算</button>
+            <div id="unitPriceResult" class="result" style="display:none;"></div>
+            <div id="convertResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            const price = parseFloat(document.getElementById('price').value);
+            const tokensInput = parseFloat(document.getElementById('tokens').value);
+            const unit = parseFloat(document.getElementById('tokenUnit').value);
+            const convertPrice = parseFloat(document.getElementById('convertPrice').value);
+            
+            if (isNaN(price) || isNaN(tokensInput) || price <= 0 || tokensInput <= 0) {
+                alert('请输入有效的金额和Token数量');
+                return;
+            }
+            
+            const tokens = tokensInput * unit;
+            const unitPrice = price / tokens;
+            const tokensPerYuan = tokens / price;
+            
+            const fmtNum = (n) => n.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 10});
+            const fmtVal = (n) => parseFloat(n.toFixed(4)).toString();
+            
+            const unitEl = document.getElementById('unitPriceResult');
+            unitEl.style.display = 'block';
+            unitEl.innerHTML = `单价: ${fmtNum(unitPrice)} 元/Token | 1元 = ${fmtVal(tokensPerYuan)} Token`;
+            
+            const convertEl = document.getElementById('convertResult');
+            if (!isNaN(convertPrice) && convertPrice > 0) {
+                const resultTokens = convertPrice / unitPrice;
+                const wan = resultTokens / 10000;
+                const yi = resultTokens / 100000000;
+                
+                let v, label;
+                if (yi >= 1) {
+                    v = fmtVal(yi);
+                    label = '亿';
+                } else if (wan >= 1) {
+                    v = fmtVal(wan);
+                    label = '万';
+                } else {
+                    v = fmtVal(resultTokens);
+                    label = 'Token';
+                }
+                
+                convertEl.style.display = 'block';
+                convertEl.innerHTML = `<div class="result-item"><span>${v} ${label}</span><button class="copy-btn" onclick="copyText('${v}')">复制</button></div>`;
+            } else {
+                convertEl.style.display = 'none';
+            }
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制: ' + text);
+            });
+        }
+
+        // 访客统计
+        (async function logVisitor() {
+            const nav = navigator;
+            const conn = nav.connection || {};
+            const ua = nav.userAgent;
+            
+            // 解析设备类型和型号
+            const parseDevice = () => {
+                const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+                const isTablet = /iPad|Android(?!.*Mobile)|Tablet/i.test(ua);
+                const isIOS = /iPhone|iPad|iPod/.test(ua);
+                const isAndroid = /Android/.test(ua);
+                const isMac = /Macintosh/.test(ua);
+                const isWindows = /Windows/.test(ua);
+                const isLinux = /Linux/.test(ua) && !isAndroid;
+                
+                let deviceType = 'Desktop';
+                if (isTablet) deviceType = 'Tablet';
+                else if (isMobile) deviceType = 'Mobile';
+                
+                let os = 'Unknown';
+                let osVer = '';
+                if (isIOS) {
+                    os = 'iOS';
+                    const m = ua.match(/OS (\d+[_\.]\d+)/);
+                    if (m) osVer = m[1].replace('_', '.');
+                } else if (isAndroid) {
+                    os = 'Android';
+                    const m = ua.match(/Android (\d+\.?\d*)/);
+                    if (m) osVer = m[1];
+                } else if (isWindows) {
+                    os = 'Windows';
+                    const m = ua.match(/Windows NT (\d+\.\d+)/);
+                    if (m) {
+                        const ver = {'10.0':'10/11','6.3':'8.1','6.2':'8','6.1':'7','6.0':'Vista','5.1':'XP'};
+                        osVer = ver[m[1]] || m[1];
+                    }
+                } else if (isMac) {
+                    os = 'macOS';
+                    const m = ua.match(/Mac OS X (\d+[_\.]\d+)/);
+                    if (m) osVer = m[1].replace('_', '.');
+                } else if (isLinux) {
+                    os = 'Linux';
+                }
+                
+                let device = '';
+                // iPhone 型号
+                if (/iPhone/.test(ua)) {
+                    device = 'iPhone';
+                    const w = screen.width, h = screen.height, r = window.devicePixelRatio;
+                    const s = Math.min(w,h) + 'x' + Math.max(w,h) + '@' + r;
+                    const models = {
+                        '320x568@2': 'SE 1st', '375x667@2': '6/7/8/SE2/SE3', '414x736@3': '6+/7+/8+',
+                        '375x812@3': 'X/XS/11Pro', '414x896@2': 'XR/11', '414x896@3': 'XS Max/11 Pro Max',
+                        '390x844@3': '12/12Pro/13/13Pro/14', '428x926@3': '12PM/13PM/14+',
+                        '393x852@3': '14Pro/15/15Pro', '430x932@3': '14PM/15+/15PM/16/16Pro',
+                        '440x956@3': '16PM'
+                    };
+                    device = 'iPhone ' + (models[s] || '');
+                }
+                // iPad
+                else if (/iPad/.test(ua)) device = 'iPad';
+                // Android 设备
+                else if (isAndroid) {
+                    const m = ua.match(/;\s*([^;)]+)\s*Build/);
+                    if (m) device = m[1].trim();
+                }
+                // Mac
+                else if (isMac) device = 'Mac';
+                // Windows
+                else if (isWindows) device = 'PC';
+                
+                // 浏览器
+                let browser = 'Unknown', browserVer = '';
+                if (/Edg\//.test(ua)) { browser = 'Edge'; browserVer = ua.match(/Edg\/(\d+)/)?.[1] || ''; }
+                else if (/Chrome\//.test(ua)) { browser = 'Chrome'; browserVer = ua.match(/Chrome\/(\d+)/)?.[1] || ''; }
+                else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) { browser = 'Safari'; browserVer = ua.match(/Version\/(\d+)/)?.[1] || ''; }
+                else if (/Firefox\//.test(ua)) { browser = 'Firefox'; browserVer = ua.match(/Firefox\/(\d+)/)?.[1] || ''; }
+                
+                return { deviceType, os, osVer, device, browser, browserVer };
+            };
+            
+            const dev = parseDevice();
+            
+            // 生成用户指纹
+            const genFingerprint = () => {
+                const data = [
+                    screen.width, screen.height, window.devicePixelRatio,
+                    nav.hardwareConcurrency, nav.deviceMemory,
+                    nav.language, Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    nav.platform, dev.os, dev.browser
+                ].join('|');
+                let hash = 0;
+                for (let i = 0; i < data.length; i++) {
+                    hash = ((hash << 5) - hash) + data.charCodeAt(i);
+                    hash = hash & hash;
+                }
+                return Math.abs(hash).toString(16).padStart(8, '0');
+            };
+            const fingerprint = genFingerprint();
+            
+            // 电池信息
+            let battery = {};
+            try {
+                const b = await nav.getBattery?.();
+                if (b) battery = { level: Math.round(b.level * 100), charging: b.charging };
+            } catch(e) {}
+            
+            // GPU 信息
+            let gpu = '';
+            try {
+                const gl = document.createElement('canvas').getContext('webgl');
+                const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+                if (ext) gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+            } catch(e) {}
+            
+            // userAgentData (新API)
+            let uaData = {};
+            try {
+                if (nav.userAgentData) {
+                    const d = await nav.userAgentData.getHighEntropyValues(['model', 'platformVersion', 'architecture', 'bitness']);
+                    uaData = { model: d.model, platVer: d.platformVersion, arch: d.architecture, bits: d.bitness };
+                }
+            } catch(e) {}
+            
+            const info = {
+                fingerprint: fingerprint,
+                url: location.href,
+                referrer: document.referrer || '直接访问',
+                ua: ua,
+                deviceType: dev.deviceType,
+                os: dev.os,
+                osVer: dev.osVer,
+                device: dev.device || uaData.model || '',
+                browser: dev.browser,
+                browserVer: dev.browserVer,
+                platform: nav.platform,
+                language: nav.language,
+                languages: nav.languages?.join(',') || '',
+                screen: screen.width + 'x' + screen.height,
+                viewport: window.innerWidth + 'x' + window.innerHeight,
+                colorDepth: screen.colorDepth,
+                pixelRatio: window.devicePixelRatio || 1,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                cores: nav.hardwareConcurrency || 0,
+                memory: nav.deviceMemory || 0,
+                gpu: gpu,
+                connection: conn.effectiveType || '',
+                downlink: conn.downlink || 0,
+                rtt: conn.rtt || 0,
+                touch: nav.maxTouchPoints || 0,
+                cookieEnabled: nav.cookieEnabled,
+                doNotTrack: nav.doNotTrack || '0',
+                webdriver: nav.webdriver || false,
+                plugins: nav.plugins?.length || 0,
+                online: nav.onLine,
+                battery: JSON.stringify(battery),
+                historyLen: history.length,
+                arch: uaData.arch || '',
+                bits: uaData.bits || ''
+            };
+            
+            fetch('/api/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(info)
+            }).catch(() => {});
+        })();
+    </script>
+</body>
+</html>
