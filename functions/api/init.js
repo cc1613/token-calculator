@@ -2,6 +2,7 @@ export async function onRequestGet(context) {
   const { env } = context;
   
   try {
+    // 访客统计表
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS visitors3 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +48,34 @@ export async function onRequestGet(context) {
         bits TEXT
       )
     `).run();
-    return new Response('Database v3 initialized successfully');
+    
+    // 用户表
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        token TEXT,
+        created_at TEXT,
+        last_login TEXT
+      )
+    `).run();
+    
+    // API Key 表
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        api_key TEXT NOT NULL,
+        usage_data TEXT,
+        error TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `).run();
+    
+    return new Response('Database initialized successfully (visitors3, users, api_keys)');
   } catch (e) {
     return new Response('Error: ' + e.message, { status: 500 });
   }
