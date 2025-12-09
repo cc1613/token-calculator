@@ -197,9 +197,7 @@
         <div class="section">
             <div class="section-title">添加密钥</div>
             <div class="add-form">
-                <input type="text" id="keyValue" placeholder="API Key">
-                <input type="number" id="keyQuota" placeholder="额度">
-                <input type="date" id="keyExpire">
+                <input type="text" id="keyValue" placeholder="输入 Factory API Key">
                 <button onclick="addKey()">添加</button>
             </div>
         </div>
@@ -273,22 +271,31 @@
         }
         
         function getKeyStatus(k) {
-            const now = new Date();
-            const expire = new Date(k.expire);
-            if (expire < now) return 'error';
-            if (k.quota < 1000) return 'low';
+            if (k.error) return 'error';
+            if (!k.usage) return 'pending';
+            const now = Date.now();
+            if (k.usage.endDate < now) return 'error';
+            const remaining = k.usage.totalAllowance - k.usage.used;
+            if (remaining < 1000000) return 'low'; // < 1M tokens
             return 'normal';
         }
         
+        function formatTokens(n) {
+            if (!n && n !== 0) return '-';
+            if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toString();
+        }
+        
         function renderKeys() {
-            const now = new Date();
             let normal = 0, low = 0, error = 0;
             
             keys.forEach(k => {
                 const status = getKeyStatus(k);
                 if (status === 'normal') normal++;
                 else if (status === 'low') low++;
-                else error++;
+                else if (status === 'error') error++;
             });
             
             document.getElementById('totalKeys').textContent = keys.length;
@@ -304,21 +311,40 @@
             
             document.getElementById('keyList').innerHTML = keys.map((k, i) => {
                 const status = getKeyStatus(k);
-                const statusText = status === 'normal' ? '正常' : status === 'low' ? '低余额' : '已过期';
-                const expire = new Date(k.expire);
-                const days = Math.ceil((expire - now) / (1000 * 60 * 60 * 24));
+                const statusText = {
+                    'normal': '正常',
+                    'low': '低余额', 
+                    'error': k.error || '已过期',
+                    'pending': '加载中...'
+                }[status];
+                
+                let infoHtml = '';
+                if (k.usage) {
+                    const used = k.usage.used || 0;
+                    const total = k.usage.totalAllowance || 0;
+                    const remaining = total - used;
+                    const expire = new Date(k.usage.endDate);
+                    const days = Math.ceil((expire - Date.now()) / (1000 * 60 * 60 * 24));
+                    infoHtml = `
+                        <span>已用: ${formatTokens(used)} / ${formatTokens(total)}</span>
+                        <span>剩余: ${formatTokens(remaining)}</span>
+                        <span>过期: ${expire.toLocaleDateString('zh-CN')} (${days > 0 ? days + '天' : '已过期'})</span>
+                    `;
+                } else if (k.error) {
+                    infoHtml = `<span style="color:#f87171">${k.error}</span>`;
+                } else {
+                    infoHtml = '<span>正在获取信息...</span>';
+                }
                 
                 return `<div class="key-card ${status} ${i === selectedIndex ? 'selected' : ''}" onclick="selectKey(${i})">
                     <div class="key-header">
                         <span class="key-value">${k.key.substring(0, 40)}${k.key.length > 40 ? '...' : ''}</span>
                         <span class="key-status ${status}">${statusText}</span>
                     </div>
-                    <div class="key-info">
-                        <span>额度: ${k.quota?.toLocaleString() || 0}</span>
-                        <span>过期: ${expire.toLocaleDateString('zh-CN')} (${days > 0 ? days + '天' : '已过期'})</span>
-                    </div>
+                    <div class="key-info">${infoHtml}</div>
                     <div class="key-actions">
-                        <button class="btn-delete" onclick="event.stopPropagation(); deleteKey(${i})">删除</button>
+                        <button class="btn-delete" onclick="event.stopPropagation(); deleteKey(${i})" style="margin-right:8px">删除</button>
+                        <button onclick="event.stopPropagation(); refreshKey(${i})" style="background:#1e3a5f;color:#60a5fa">刷新</button>
                     </div>
                 </div>`;
             }).join('');
@@ -330,20 +356,57 @@
             renderKeys();
         }
         
-        function addKey() {
-            const key = document.getElementById('keyValue').value.trim();
-            const quota = parseInt(document.getElementById('keyQuota').value) || 0;
-            const expire = document.getElementById('keyExpire').value;
-            
-            if (!key) { alert('请输入 API Key'); return; }
-            if (!expire) { alert('请选择过期时间'); return; }
-            
-            keys.push({ key, quota, expire });
+        async function fetchKeyInfo(index) {
+            const k = keys[index];
+            try {
+                const response = await fetch(`/api/check?key=${encodeURIComponent(k.key)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    keys[index].error = data.error;
+                    keys[index].usage = null;
+                } else if (data.usage) {
+                    keys[index].error = null;
+                    keys[index].usage = {
+                        startDate: data.usage.startDate,
+                        endDate: data.usage.endDate,
+                        used: data.usage.standard?.orgTotalTokensUsed || 0,
+                        totalAllowance: data.usage.standard?.totalAllowance || 0,
+                        usedRatio: data.usage.standard?.usedRatio || 0
+                    };
+                }
+            } catch (e) {
+                keys[index].error = '获取失败';
+            }
             saveKeys();
             renderKeys();
+        }
+        
+        async function refreshKey(index) {
+            keys[index].error = null;
+            keys[index].usage = null;
+            renderKeys();
+            await fetchKeyInfo(index);
+        }
+        
+        async function refreshAll() {
+            for (let i = 0; i < keys.length; i++) {
+                await fetchKeyInfo(i);
+            }
+        }
+        
+        async function addKey() {
+            const key = document.getElementById('keyValue').value.trim();
+            if (!key) { alert('请输入 API Key'); return; }
+            if (keys.some(k => k.key === key)) { alert('此 Key 已存在'); return; }
             
+            const index = keys.length;
+            keys.push({ key, usage: null, error: null });
+            saveKeys();
+            renderKeys();
             document.getElementById('keyValue').value = '';
-            document.getElementById('keyQuota').value = '';
+            
+            await fetchKeyInfo(index);
         }
         
         function deleteKey(index) {
@@ -367,6 +430,17 @@
         }
         
         renderKeys();
+        
+        // 自动刷新
+        let autoRefreshTimer = null;
+        document.getElementById('autoRefresh').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                refreshAll();
+                autoRefreshTimer = setInterval(refreshAll, 60000);
+            } else {
+                clearInterval(autoRefreshTimer);
+            }
+        });
     </script>
 </body>
 </html>
