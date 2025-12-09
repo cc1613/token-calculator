@@ -39,6 +39,23 @@
             border-radius: 6px;
             cursor: pointer;
         }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
         .table-wrap {
             overflow-x: auto;
             background: white;
@@ -84,40 +101,72 @@
             </div>
         </div>
         
-        <div class="table-wrap">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('all')">全部访问</button>
+            <button class="tab" onclick="showTab('users')">独立用户</button>
+        </div>
+        
+        <div id="allTab" class="table-wrap">
             <table>
                 <thead>
                     <tr>
                         <th>时间</th>
+                        <th>用户ID</th>
                         <th>IP</th>
                         <th>国家</th>
                         <th>城市</th>
-                        <th>ASN</th>
                         <th>类型</th>
                         <th>系统</th>
-                        <th>版本</th>
                         <th>设备</th>
                         <th>浏览器</th>
-                        <th>GPU</th>
                         <th>屏幕</th>
                         <th>CPU</th>
                         <th>内存</th>
-                        <th>网络</th>
-                        <th>触控</th>
-                        <th>电池</th>
-                        <th>架构</th>
                     </tr>
                 </thead>
                 <tbody id="visitorList">
-                    <tr><td colspan="27" class="empty">加载中...</td></tr>
+                    <tr><td colspan="12" class="empty">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="usersTab" class="table-wrap" style="display:none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户ID</th>
+                        <th>访问次数</th>
+                        <th>首次访问</th>
+                        <th>最后访问</th>
+                        <th>IP</th>
+                        <th>国家</th>
+                        <th>类型</th>
+                        <th>系统</th>
+                        <th>设备</th>
+                        <th>浏览器</th>
+                        <th>屏幕</th>
+                    </tr>
+                </thead>
+                <tbody id="userList">
+                    <tr><td colspan="11" class="empty">加载中...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
+        let allVisitors = [];
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[onclick="showTab('${tab}')"]`).classList.add('active');
+            document.getElementById('allTab').style.display = tab === 'all' ? 'block' : 'none';
+            document.getElementById('usersTab').style.display = tab === 'users' ? 'block' : 'none';
+        }
+        
         async function loadStats() {
-            document.getElementById('visitorList').innerHTML = '<tr><td colspan="19" class="empty">加载中...</td></tr>';
+            document.getElementById('visitorList').innerHTML = '<tr><td colspan="12" class="empty">加载中...</td></tr>';
+            document.getElementById('userList').innerHTML = '<tr><td colspan="11" class="empty">加载中...</td></tr>';
             
             try {
                 const res = await fetch('/api/stats');
@@ -125,48 +174,70 @@
                 
                 document.getElementById('totalCount').textContent = data.count || 0;
                 
-                const visitors = data.visitors || [];
+                allVisitors = data.visitors || [];
                 const today = new Date().toDateString();
-                const todayVisits = visitors.filter(v => new Date(v.timestamp).toDateString() === today);
-                const uniqueIps = new Set(visitors.map(v => v.ip)).size;
+                const todayVisits = allVisitors.filter(v => new Date(v.timestamp).toDateString() === today);
+                const uniqueUsers = new Set(allVisitors.map(v => v.fingerprint).filter(f => f)).size;
                 
                 document.getElementById('todayCount').textContent = todayVisits.length;
-                document.getElementById('uniqueIps').textContent = uniqueIps;
+                document.getElementById('uniqueIps').textContent = uniqueUsers || new Set(allVisitors.map(v => v.ip)).size;
                 
-                if (visitors.length === 0) {
-                    document.getElementById('visitorList').innerHTML = '<tr><td colspan="19" class="empty">暂无数据</td></tr>';
+                if (allVisitors.length === 0) {
+                    document.getElementById('visitorList').innerHTML = '<tr><td colspan="12" class="empty">暂无数据</td></tr>';
+                    document.getElementById('userList').innerHTML = '<tr><td colspan="11" class="empty">暂无数据</td></tr>';
                     return;
                 }
                 
-                visitors.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                allVisitors.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
-                document.getElementById('visitorList').innerHTML = visitors.map(v => {
-                    const bat = v.battery ? JSON.parse(v.battery) : {};
-                    const batStr = bat.level !== undefined ? bat.level + '%' + (bat.charging ? '⚡' : '') : '-';
-                    const arch = v.arch && v.bits ? v.arch + '/' + v.bits + 'bit' : '-';
+                // 全部访问列表
+                document.getElementById('visitorList').innerHTML = allVisitors.map(v => `<tr>
+                    <td>${new Date(v.timestamp).toLocaleString('zh-CN')}</td>
+                    <td>${v.fingerprint || '-'}</td>
+                    <td>${v.ip || '-'}</td>
+                    <td>${v.country || '-'}</td>
+                    <td>${v.city || '-'}</td>
+                    <td>${v.deviceType || '-'}</td>
+                    <td>${v.os || '-'} ${v.osVer || ''}</td>
+                    <td title="${v.device || ''}">${v.device || '-'}</td>
+                    <td>${v.browser || '-'} ${v.browserVer || ''}</td>
+                    <td>${v.screen || '-'}</td>
+                    <td>${v.cores || '-'}</td>
+                    <td>${v.memory ? v.memory + 'G' : '-'}</td>
+                </tr>`).join('');
+                
+                // 按用户分组
+                const userMap = {};
+                allVisitors.forEach(v => {
+                    const id = v.fingerprint || v.ip;
+                    if (!userMap[id]) {
+                        userMap[id] = { ...v, visits: [], count: 0 };
+                    }
+                    userMap[id].visits.push(v.timestamp);
+                    userMap[id].count++;
+                });
+                
+                const users = Object.values(userMap).sort((a, b) => b.count - a.count);
+                
+                document.getElementById('userList').innerHTML = users.map(u => {
+                    const times = u.visits.map(t => new Date(t)).sort((a,b) => a-b);
                     return `<tr>
-                        <td>${new Date(v.timestamp).toLocaleString('zh-CN')}</td>
-                        <td>${v.ip || '-'}</td>
-                        <td>${v.country || '-'}</td>
-                        <td>${v.city || '-'}</td>
-                        <td>${v.asn || '-'}</td>
-                        <td>${v.deviceType || '-'}</td>
-                        <td>${v.os || '-'}</td>
-                        <td>${v.osVer || '-'}</td>
-                        <td title="${v.device || ''}">${v.device || '-'}</td>
-                        <td>${v.browser || '-'}${v.browserVer ? ' ' + v.browserVer : ''}</td>
-                        <td title="${v.gpu || ''}">${(v.gpu || '-').substring(0, 20)}</td>
-                        <td>${v.screen || '-'}</td>
-                        <td>${v.cores || '-'}</td>
-                        <td>${v.memory ? v.memory + 'G' : '-'}</td>
-                        <td>${v.connection || '-'}</td>
-                        <td>${v.touch || 0}</td>
-                        <td>${batStr}</td>
-                        <td>${arch}</td>
+                        <td>${u.fingerprint || u.ip}</td>
+                        <td><strong>${u.count}</strong></td>
+                        <td>${times[0].toLocaleString('zh-CN')}</td>
+                        <td>${times[times.length-1].toLocaleString('zh-CN')}</td>
+                        <td>${u.ip || '-'}</td>
+                        <td>${u.country || '-'}</td>
+                        <td>${u.deviceType || '-'}</td>
+                        <td>${u.os || '-'} ${u.osVer || ''}</td>
+                        <td title="${u.device || ''}">${u.device || '-'}</td>
+                        <td>${u.browser || '-'} ${u.browserVer || ''}</td>
+                        <td>${u.screen || '-'}</td>
                     </tr>`;
                 }).join('');
+                
             } catch (e) {
-                document.getElementById('visitorList').innerHTML = `<tr><td colspan="19" class="empty">加载失败: ${e.message}</td></tr>`;
+                document.getElementById('visitorList').innerHTML = `<tr><td colspan="12" class="empty">加载失败: ${e.message}</td></tr>`;
             }
         }
         

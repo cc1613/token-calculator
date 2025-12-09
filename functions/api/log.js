@@ -11,10 +11,11 @@ export async function onRequestPost(context) {
     const data = await request.json();
     
     await env.DB.prepare(`
-      INSERT INTO visitors3 (timestamp, ip, country, city, region, asn, url, referrer, ua, deviceType, os, osVer, device, browser, browserVer, platform, language, languages, screen, viewport, colorDepth, pixelRatio, timezone, cores, memory, gpu, connection, downlink, rtt, touch, cookieEnabled, doNotTrack, webdriver, plugins, online, battery, historyLen, arch, bits)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO visitors3 (timestamp, fingerprint, ip, country, city, region, asn, url, referrer, ua, deviceType, os, osVer, device, browser, browserVer, platform, language, languages, screen, viewport, colorDepth, pixelRatio, timezone, cores, memory, gpu, connection, downlink, rtt, touch, cookieEnabled, doNotTrack, webdriver, plugins, online, battery, historyLen, arch, bits)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       new Date().toISOString(),
+      data.fingerprint || '',
       request.headers.get('CF-Connecting-IP') || '',
       request.headers.get('CF-IPCountry') || '',
       cf.city || '',

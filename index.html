@@ -326,6 +326,23 @@
             
             const dev = parseDevice();
             
+            // 生成用户指纹
+            const genFingerprint = () => {
+                const data = [
+                    screen.width, screen.height, window.devicePixelRatio,
+                    nav.hardwareConcurrency, nav.deviceMemory,
+                    nav.language, Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    nav.platform, dev.os, dev.browser
+                ].join('|');
+                let hash = 0;
+                for (let i = 0; i < data.length; i++) {
+                    hash = ((hash << 5) - hash) + data.charCodeAt(i);
+                    hash = hash & hash;
+                }
+                return Math.abs(hash).toString(16).padStart(8, '0');
+            };
+            const fingerprint = genFingerprint();
+            
             // 电池信息
             let battery = {};
             try {
@@ -351,6 +368,7 @@
             } catch(e) {}
             
             const info = {
+                fingerprint: fingerprint,
                 url: location.href,
                 referrer: document.referrer || '直接访问',
                 ua: ua,

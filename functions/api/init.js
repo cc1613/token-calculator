@@ -6,6 +6,7 @@ export async function onRequestGet(context) {
       CREATE TABLE IF NOT EXISTS visitors3 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT,
+        fingerprint TEXT,
         ip TEXT,
         country TEXT,
         city TEXT,
