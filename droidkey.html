@@ -116,6 +116,20 @@
         .auto-refresh { display: flex; align-items: center; gap: 8px; font-size: 13px; }
         .auto-refresh input { accent-color: #667eea; }
         .hidden { display: none !important; }
+        
+        /* 主Tab样式 */
+        .main-tabs { display: flex; gap: 0; margin-bottom: 20px; }
+        .main-tab { flex: 1; padding: 12px; background: #1a1a1a; border: none; color: #888; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .main-tab:first-child { border-radius: 8px 0 0 8px; }
+        .main-tab:last-child { border-radius: 0 8px 8px 0; }
+        .main-tab:hover { background: #252525; }
+        .main-tab.active { background: #667eea; color: white; }
+        
+        /* 教程步骤样式 */
+        .tutorial-step { display: flex; gap: 16px; margin-bottom: 16px; padding: 16px; background: #0a0a0a; border-radius: 8px; }
+        .step-num { width: 32px; height: 32px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+        .step-content h4 { font-size: 14px; margin-bottom: 6px; color: #fff; }
+        .step-content p { font-size: 13px; color: #888; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -145,60 +159,21 @@
             </div>
         </div>
         
-        <div class="section">
-            <div class="os-detect">检测到: <span id="osName">-</span></div>
-            <div class="current-key">当前: <code id="currentKey">-</code></div>
-            
-            <h3 class="collapsible collapsed" style="font-size:14px; margin:16px 0 8px;" onclick="toggleEnvSection()">
-                <span>环境变量设置指令</span>
-            </h3>
-            <div class="collapse-content collapsed" id="envSection" style="max-height: 500px;">
-            <div class="tabs">
-                <button class="tab active" onclick="showOS('windows')">Windows</button>
-                <button class="tab" onclick="showOS('linux')">Linux</button>
-                <button class="tab" onclick="showOS('mac')">macOS</button>
-            </div>
-            
-            <div id="cmdWindows">
-                <div class="cmd-block">
-                    <div class="cmd-label">临时设置 (当前终端有效)</div>
-                    <div class="cmd-box"><code id="cmdWinTemp">set FACTORY_API_KEY=YOUR_API_KEY</code><button class="copy-btn" onclick="copyCmd('cmdWinTemp')">复制</button></div>
-                </div>
-                <div class="cmd-block">
-                    <div class="cmd-label">永久设置 (需管理员权限)</div>
-                    <div class="cmd-box"><code id="cmdWinPerm">setx FACTORY_API_KEY "YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdWinPerm')">复制</button></div>
-                </div>
-            </div>
-            <div id="cmdLinux" style="display:none;">
-                <div class="cmd-block">
-                    <div class="cmd-label">临时设置</div>
-                    <div class="cmd-box"><code id="cmdLinuxTemp">export FACTORY_API_KEY="YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdLinuxTemp')">复制</button></div>
-                </div>
-                <div class="cmd-block">
-                    <div class="cmd-label">Bash 永久设置 (~/.bashrc)</div>
-                    <div class="cmd-box"><code id="cmdLinuxBash">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.bashrc && source ~/.bashrc</code><button class="copy-btn" onclick="copyCmd('cmdLinuxBash')">复制</button></div>
-                </div>
-            </div>
-            <div id="cmdMac" style="display:none;">
-                <div class="cmd-block">
-                    <div class="cmd-label">临时设置</div>
-                    <div class="cmd-box"><code id="cmdMacTemp">export FACTORY_API_KEY="YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdMacTemp')">复制</button></div>
-                </div>
-                <div class="cmd-block">
-                    <div class="cmd-label">Zsh 永久设置 (~/.zshrc)</div>
-                    <div class="cmd-box"><code id="cmdMacZsh">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.zshrc && source ~/.zshrc</code><button class="copy-btn" onclick="copyCmd('cmdMacZsh')">复制</button></div>
-                </div>
-            </div>
-            </div>
+        <!-- 主Tab切换 -->
+        <div class="main-tabs">
+            <button class="main-tab active" onclick="switchMainTab('keys')">密钥管理</button>
+            <button class="main-tab" onclick="switchMainTab('tutorial')">使用教程</button>
         </div>
         
-        <div class="section">
-            <div class="section-title">添加密钥</div>
-            <div class="add-form">
-                <input type="text" id="keyValue" placeholder="输入 Factory API Key">
-                <button onclick="addKey()" id="addKeyBtn">添加</button>
+        <!-- 密钥管理 Tab -->
+        <div id="keysTab">
+            <div class="section">
+                <div class="section-title">添加密钥</div>
+                <div class="add-form">
+                    <input type="text" id="keyValue" placeholder="输入 Factory API Key">
+                    <button onclick="addKey()" id="addKeyBtn">添加</button>
+                </div>
             </div>
-        </div>
         
         <div class="stats">
             <div class="stat"><div class="stat-value" id="totalKeys">0</div><div class="stat-label">总计</div></div>
@@ -208,7 +183,7 @@
         </div>
         
         <div class="toolbar">
-            <div class="toolbar-left">密钥列表 <span style="color:#666">点击卡片选中密钥，上方命令自动更新</span></div>
+            <div class="toolbar-left">密钥列表 <span style="color:#666">拖拽可调整顺序</span></div>
             <div class="toolbar-right">
                 <label class="auto-refresh"><input type="checkbox" id="autoRefresh"> 自动刷新 (60秒)</label>
                 <button onclick="refreshAll()">刷新全部</button>
@@ -218,6 +193,113 @@
         
         <div class="key-list" id="keyList">
             <div class="empty">暂无密钥，请添加你的第一个 API Key</div>
+        </div>
+        </div>
+        
+        <!-- 使用教程 Tab -->
+        <div id="tutorialTab" class="hidden">
+            <div class="section">
+                <h3 style="font-size:16px; margin-bottom:16px;">📖 如何使用 Factory API Key</h3>
+                
+                <div class="tutorial-step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <h4>获取 API Key</h4>
+                        <p>登录 <a href="https://app.factory.ai" target="_blank" style="color:#667eea">Factory 官网</a>，在设置页面创建 API Key</p>
+                    </div>
+                </div>
+                
+                <div class="tutorial-step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <h4>添加到本工具</h4>
+                        <p>在"密钥管理"页面添加你的 Key，系统会自动获取额度和有效期信息</p>
+                    </div>
+                </div>
+                
+                <div class="tutorial-step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <h4>配置环境变量</h4>
+                        <p>选择下方对应的操作系统，复制命令到终端执行</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="os-detect">检测到: <span id="osName">-</span></div>
+                <div class="current-key">当前选中: <code id="currentKey">未选择密钥</code></div>
+                <p style="font-size:12px; color:#666; margin-top:4px;">提示：在密钥管理中点击卡片选中密钥后，下方命令会自动更新</p>
+                
+                <h3 style="font-size:14px; margin:20px 0 12px;">环境变量设置指令</h3>
+                <div class="tabs">
+                    <button class="tab active" onclick="showOS('windows')">Windows</button>
+                    <button class="tab" onclick="showOS('linux')">Linux</button>
+                    <button class="tab" onclick="showOS('mac')">macOS</button>
+                </div>
+                
+                <div id="cmdWindows">
+                    <div class="cmd-block">
+                        <div class="cmd-label">PowerShell 临时设置 <span style="color:#666">仅当前会话有效</span></div>
+                        <div class="cmd-box"><code id="cmdWinPS">$env:FACTORY_API_KEY="YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdWinPS')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">PowerShell 永久设置 <span style="color:#666">用户级环境变量，重启终端生效</span></div>
+                        <div class="cmd-box"><code id="cmdWinPerm">[Environment]::SetEnvironmentVariable("FACTORY_API_KEY", "YOUR_API_KEY", "User")</code><button class="copy-btn" onclick="copyCmd('cmdWinPerm')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">CMD 临时设置 <span style="color:#666">仅当前窗口有效</span></div>
+                        <div class="cmd-box"><code id="cmdWinTemp">set FACTORY_API_KEY=YOUR_API_KEY</code><button class="copy-btn" onclick="copyCmd('cmdWinTemp')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">CMD 永久设置 <span style="color:#666">需管理员权限，重启生效</span></div>
+                        <div class="cmd-box"><code id="cmdWinSetx">setx FACTORY_API_KEY "YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdWinSetx')">复制</button></div>
+                    </div>
+                </div>
+                <div id="cmdLinux" style="display:none;">
+                    <div class="cmd-block">
+                        <div class="cmd-label">临时设置 <span style="color:#666">仅当前终端有效</span></div>
+                        <div class="cmd-box"><code id="cmdLinuxTemp">export FACTORY_API_KEY="YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdLinuxTemp')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">Bash 永久设置 <span style="color:#666">写入 ~/.bashrc</span></div>
+                        <div class="cmd-box"><code id="cmdLinuxBash">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.bashrc && source ~/.bashrc</code><button class="copy-btn" onclick="copyCmd('cmdLinuxBash')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">Zsh 永久设置 <span style="color:#666">写入 ~/.zshrc</span></div>
+                        <div class="cmd-box"><code id="cmdLinuxZsh">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.zshrc && source ~/.zshrc</code><button class="copy-btn" onclick="copyCmd('cmdLinuxZsh')">复制</button></div>
+                    </div>
+                </div>
+                <div id="cmdMac" style="display:none;">
+                    <div class="cmd-block">
+                        <div class="cmd-label">临时设置 <span style="color:#666">仅当前终端有效</span></div>
+                        <div class="cmd-box"><code id="cmdMacTemp">export FACTORY_API_KEY="YOUR_API_KEY"</code><button class="copy-btn" onclick="copyCmd('cmdMacTemp')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">Zsh 永久设置 <span style="color:#666">macOS 默认 Shell，写入 ~/.zshrc</span></div>
+                        <div class="cmd-box"><code id="cmdMacZsh">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.zshrc && source ~/.zshrc</code><button class="copy-btn" onclick="copyCmd('cmdMacZsh')">复制</button></div>
+                    </div>
+                    <div class="cmd-block">
+                        <div class="cmd-label">Bash 永久设置 <span style="color:#666">如果使用 Bash</span></div>
+                        <div class="cmd-box"><code id="cmdMacBash">echo 'export FACTORY_API_KEY="YOUR_API_KEY"' >> ~/.bash_profile && source ~/.bash_profile</code><button class="copy-btn" onclick="copyCmd('cmdMacBash')">复制</button></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3 style="font-size:14px; margin-bottom:12px;">🚀 开始使用</h3>
+                <p style="color:#888; line-height:1.8;">
+                    配置好环境变量后，你可以在终端中使用 Factory CLI：
+                </p>
+                <div class="cmd-block" style="margin-top:12px;">
+                    <div class="cmd-label">安装 Factory CLI</div>
+                    <div class="cmd-box"><code>npm install -g @anthropics/factory-cli</code><button class="copy-btn" onclick="copyText('npm install -g @anthropics/factory-cli')">复制</button></div>
+                </div>
+                <div class="cmd-block">
+                    <div class="cmd-label">验证配置</div>
+                    <div class="cmd-box"><code>echo $FACTORY_API_KEY</code><button class="copy-btn" onclick="copyText('echo $FACTORY_API_KEY')">复制</button></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -309,31 +391,72 @@
             else showOS('linux');
         }
         
+        function switchMainTab(tab) {
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.main-tab[onclick="switchMainTab('${tab}')"]`).classList.add('active');
+            document.getElementById('keysTab').classList.toggle('hidden', tab !== 'keys');
+            document.getElementById('tutorialTab').classList.toggle('hidden', tab !== 'tutorial');
+        }
+        
         function showOS(os) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.tab[onclick="showOS('${os}')"]`).classList.add('active');
-            document.getElementById('cmdWindows').style.display = os === 'windows' ? 'block' : 'none';
-            document.getElementById('cmdLinux').style.display = os === 'linux' ? 'block' : 'none';
-            document.getElementById('cmdMac').style.display = os === 'mac' ? 'block' : 'none';
+            document.querySelectorAll(`.tab[onclick="showOS('${os}')"]`).forEach(t => t.classList.add('active'));
+            document.querySelectorAll('#cmdWindows').forEach(el => el.style.display = os === 'windows' ? 'block' : 'none');
+            document.querySelectorAll('#cmdLinux').forEach(el => el.style.display = os === 'linux' ? 'block' : 'none');
+            document.querySelectorAll('#cmdMac').forEach(el => el.style.display = os === 'mac' ? 'block' : 'none');
         }
         
         function updateCmds(key) {
             const k = key || 'YOUR_API_KEY';
-            document.getElementById('cmdWinTemp').textContent = `set FACTORY_API_KEY=${k}`;
-            document.getElementById('cmdWinPerm').textContent = `setx FACTORY_API_KEY "${k}"`;
-            document.getElementById('cmdLinuxTemp').textContent = `export FACTORY_API_KEY="${k}"`;
-            document.getElementById('cmdLinuxBash').textContent = `echo 'export FACTORY_API_KEY="${k}"' >> ~/.bashrc && source ~/.bashrc`;
-            document.getElementById('cmdMacTemp').textContent = `export FACTORY_API_KEY="${k}"`;
-            document.getElementById('cmdMacZsh').textContent = `echo 'export FACTORY_API_KEY="${k}"' >> ~/.zshrc && source ~/.zshrc`;
-            document.getElementById('currentKey').textContent = key ? key.substring(0, 30) + (key.length > 30 ? '...' : '') : '-';
+            const display = key ? key.substring(0, 30) + (key.length > 30 ? '...' : '') : '未选择密钥';
+            
+            // Windows
+            const cmdWinPS = document.getElementById('cmdWinPS');
+            const cmdWinPerm = document.getElementById('cmdWinPerm');
+            const cmdWinTemp = document.getElementById('cmdWinTemp');
+            const cmdWinSetx = document.getElementById('cmdWinSetx');
+            if (cmdWinPS) cmdWinPS.textContent = `$env:FACTORY_API_KEY="${k}"`;
+            if (cmdWinPerm) cmdWinPerm.textContent = `[Environment]::SetEnvironmentVariable("FACTORY_API_KEY", "${k}", "User")`;
+            if (cmdWinTemp) cmdWinTemp.textContent = `set FACTORY_API_KEY=${k}`;
+            if (cmdWinSetx) cmdWinSetx.textContent = `setx FACTORY_API_KEY "${k}"`;
+            
+            // Linux
+            const cmdLinuxTemp = document.getElementById('cmdLinuxTemp');
+            const cmdLinuxBash = document.getElementById('cmdLinuxBash');
+            const cmdLinuxZsh = document.getElementById('cmdLinuxZsh');
+            if (cmdLinuxTemp) cmdLinuxTemp.textContent = `export FACTORY_API_KEY="${k}"`;
+            if (cmdLinuxBash) cmdLinuxBash.textContent = `echo 'export FACTORY_API_KEY="${k}"' >> ~/.bashrc && source ~/.bashrc`;
+            if (cmdLinuxZsh) cmdLinuxZsh.textContent = `echo 'export FACTORY_API_KEY="${k}"' >> ~/.zshrc && source ~/.zshrc`;
+            
+            // macOS
+            const cmdMacTemp = document.getElementById('cmdMacTemp');
+            const cmdMacZsh = document.getElementById('cmdMacZsh');
+            const cmdMacBash = document.getElementById('cmdMacBash');
+            if (cmdMacTemp) cmdMacTemp.textContent = `export FACTORY_API_KEY="${k}"`;
+            if (cmdMacZsh) cmdMacZsh.textContent = `echo 'export FACTORY_API_KEY="${k}"' >> ~/.zshrc && source ~/.zshrc`;
+            if (cmdMacBash) cmdMacBash.textContent = `echo 'export FACTORY_API_KEY="${k}"' >> ~/.bash_profile && source ~/.bash_profile`;
+            
+            // 当前选中显示
+            const currentKey = document.getElementById('currentKey');
+            if (currentKey) currentKey.textContent = display;
         }
         
         function copyCmd(id) {
-            const text = document.getElementById(id).textContent;
+            const el = document.getElementById(id);
+            if (!el) return;
+            const text = el.textContent;
             navigator.clipboard.writeText(text).then(() => {
-                const btn = document.querySelector(`#${id}`).nextElementSibling;
-                btn.textContent = '已复制';
-                setTimeout(() => btn.textContent = '复制', 1500);
+                const btn = el.nextElementSibling;
+                if (btn) {
+                    btn.textContent = '已复制';
+                    setTimeout(() => btn.textContent = '复制', 1500);
+                }
+            });
+        }
+        
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制');
             });
         }
         
@@ -654,14 +777,6 @@
             } catch (e) {
                 alert('保存备注失败');
             }
-        }
-        
-        // 折叠环境变量指令
-        function toggleEnvSection() {
-            const section = document.getElementById('envSection');
-            const header = document.querySelector('.collapsible');
-            section.classList.toggle('collapsed');
-            header.classList.toggle('collapsed');
         }
         
         // 自动刷新
