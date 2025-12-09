@@ -145,6 +145,11 @@
             <input type="password" class="auth-input" id="authPassword" placeholder="密码">
             <button class="auth-btn" id="authBtn" onclick="handleAuth()">登录</button>
             <div class="auth-error" id="authError"></div>
+            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #333; text-align:center;">
+                <p style="color:#666; font-size:12px; margin-bottom:12px;">或者</p>
+                <button class="auth-btn" style="background:#2d3748;" onclick="useLocalMode()">本地模式 (无需登录)</button>
+                <p style="color:#666; font-size:11px; margin-top:8px;">数据仅保存在当前浏览器</p>
+            </div>
         </div>
     </div>
 
@@ -154,7 +159,7 @@
             <h1>🔑 Factory Key 管理</h1>
             <div class="user-info">
                 <span id="currentUser"></span>
-                <button class="logout-btn" onclick="logout()">退出登录</button>
+                <button class="logout-btn" id="logoutBtn" onclick="logout()">退出登录</button>
                 <a href="index.html" class="back">← 返回工具箱</a>
             </div>
         </div>
@@ -309,15 +314,47 @@
         let currentUser = null;
         let authToken = null;
         let authMode = 'login';
+        let isLocalMode = false;
         
-        // 检查是否已登录
+        // 检查是否已登录或本地模式
         const savedAuth = localStorage.getItem('factoryAuth');
+        const savedLocalMode = localStorage.getItem('factoryLocalMode');
         if (savedAuth) {
             const auth = JSON.parse(savedAuth);
             authToken = auth.token;
             currentUser = auth.username;
+            isLocalMode = false;
             showMainUI();
             loadKeys();
+        } else if (savedLocalMode) {
+            isLocalMode = true;
+            currentUser = '本地模式';
+            showMainUI();
+            loadLocalKeys();
+        }
+        
+        function useLocalMode() {
+            isLocalMode = true;
+            currentUser = '本地模式';
+            localStorage.setItem('factoryLocalMode', 'true');
+            showMainUI();
+            loadLocalKeys();
+        }
+        
+        function loadLocalKeys() {
+            const saved = localStorage.getItem('factoryLocalKeys');
+            keys = saved ? JSON.parse(saved) : [];
+            renderKeys();
+            // 刷新所有 key 的信息
+            keys.forEach((k, i) => {
+                if (!k.usage && !k.error) {
+                    refreshLocalKey(i);
+                }
+            });
+        }
+        
+        function saveLocalKeys() {
+            localStorage.setItem('factoryLocalKeys', JSON.stringify(keys));
         }
         
         function switchAuthTab(mode) {
@@ -365,13 +402,19 @@
             document.getElementById('authContainer').classList.add('hidden');
             document.getElementById('mainContainer').classList.remove('hidden');
             document.getElementById('currentUser').textContent = currentUser;
+            document.getElementById('logoutBtn').textContent = isLocalMode ? '退出本地模式' : '退出登录';
             initOS();
         }
         
         function logout() {
-            localStorage.removeItem('factoryAuth');
+            if (isLocalMode) {
+                localStorage.removeItem('factoryLocalMode');
+            } else {
+                localStorage.removeItem('factoryAuth');
+            }
             authToken = null;
             currentUser = null;
+            isLocalMode = false;
             keys = [];
             document.getElementById('authContainer').classList.remove('hidden');
             document.getElementById('mainContainer').classList.add('hidden');
@@ -582,41 +625,83 @@
             const keyInput = document.getElementById('keyValue');
             const key = keyInput.value.trim();
             if (!key) { alert('请输入 API Key'); return; }
+            if (keys.some(k => k.key === key)) { alert('此 Key 已存在'); return; }
             
             const btn = document.getElementById('addKeyBtn');
             btn.disabled = true;
             btn.textContent = '添加中...';
             
-            try {
-                const response = await fetch('/api/keys', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    body: JSON.stringify({ apiKey: key })
-                });
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-                
-                keys.unshift({
-                    id: data.id,
-                    key: data.apiKey,
-                    usage: data.usageData,
-                    error: data.error
-                });
+            if (isLocalMode) {
+                // 本地模式
+                const newKey = { id: Date.now(), key, usage: null, error: null, note: '' };
+                keys.unshift(newKey);
                 keyInput.value = '';
+                saveLocalKeys();
                 renderKeys();
-            } catch (e) {
-                alert('添加失败');
-            } finally {
                 btn.disabled = false;
                 btn.textContent = '添加';
+                refreshLocalKey(0);
+            } else {
+                // 云端模式
+                try {
+                    const response = await fetch('/api/keys', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                        body: JSON.stringify({ apiKey: key })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    
+                    keys.unshift({
+                        id: data.id,
+                        key: data.apiKey,
+                        usage: data.usageData,
+                        error: data.error,
+                        note: ''
+                    });
+                    keyInput.value = '';
+                    renderKeys();
+                } catch (e) {
+                    alert('添加失败');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = '添加';
+                }
             }
         }
         
+        async function refreshLocalKey(index) {
+            const k = keys[index];
+            try {
+                const response = await fetch(`/api/check?key=${encodeURIComponent(k.key)}`);
+                const data = await response.json();
+                if (data.error) {
+                    keys[index].error = data.error;
+                    keys[index].usage = null;
+                } else if (data.usage) {
+                    keys[index].error = null;
+                    keys[index].usage = data.usage;
+                }
+            } catch (e) {
+                keys[index].error = '获取失败';
+            }
+            saveLocalKeys();
+            renderKeys();
+        }
+        
         async function refreshKey(index) {
+            if (isLocalMode) {
+                keys[index].usage = null;
+                keys[index].error = null;
+                renderKeys();
+                await refreshLocalKey(index);
+                return;
+            }
+            
             const k = keys[index];
             k.usage = null;
             k.error = null;
@@ -648,6 +733,15 @@
         async function deleteKey(index) {
             if (!confirm('确定删除此密钥？')) return;
             
+            if (isLocalMode) {
+                keys.splice(index, 1);
+                if (selectedIndex === index) { selectedIndex = -1; updateCmds(null); }
+                else if (selectedIndex > index) selectedIndex--;
+                saveLocalKeys();
+                renderKeys();
+                return;
+            }
+            
             try {
                 await fetch(`/api/keys?id=${keys[index].id}`, {
                     method: 'DELETE',
@@ -665,6 +759,15 @@
         
         async function clearAll() {
             if (!confirm('确定清空所有密钥？')) return;
+            
+            if (isLocalMode) {
+                keys = [];
+                selectedIndex = -1;
+                saveLocalKeys();
+                renderKeys();
+                updateCmds(null);
+                return;
+            }
             
             for (const k of keys) {
                 await fetch(`/api/keys?id=${k.id}`, {
@@ -741,6 +844,11 @@
         }
         
         async function saveOrder() {
+            if (isLocalMode) {
+                saveLocalKeys();
+                return;
+            }
+            
             try {
                 const order = keys.map(k => k.id);
                 await fetch('/api/keys/order', {
@@ -758,6 +866,13 @@
             const k = keys[index];
             const note = prompt('输入备注 (留空则清除):', k.note || '');
             if (note === null) return; // 取消
+            
+            if (isLocalMode) {
+                keys[index].note = note;
+                saveLocalKeys();
+                renderKeys();
+                return;
+            }
             
             try {
                 const response = await fetch('/api/keys', {
