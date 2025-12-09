@@ -31,7 +31,7 @@ export async function onRequest(context) {
         // GET - 获取用户的所有 Key
         if (request.method === 'GET') {
             const keys = await env.DB.prepare(
-                'SELECT id, api_key, usage_data, error, note, created_at, updated_at FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
+                'SELECT id, api_key, usage_data, error, note, created_at, updated_at FROM api_keys WHERE user_id = ? ORDER BY sort_order ASC, created_at DESC'
             ).bind(user.id).all();
             
             return new Response(JSON.stringify({ keys: keys.results }), { headers: corsHeaders });

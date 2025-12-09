@@ -83,6 +83,13 @@ export async function onRequestGet(context) {
       // 字段已存在，忽略错误
     }
     
+    // 添加 sort_order 字段
+    try {
+      await env.DB.prepare('ALTER TABLE api_keys ADD COLUMN sort_order INTEGER DEFAULT 0').run();
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+    
     return new Response('Database initialized successfully (visitors3, users, api_keys)');
   } catch (e) {
     return new Response('Error: ' + e.message, { status: 500 });
